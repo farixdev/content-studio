@@ -26,7 +26,7 @@ export function buildMonthGroups(items: TaskListItem[], since: Date): MonthGroup
   const byMonth = new Map<string, TaskListItem[]>();
   for (const t of items) {
     const d = new Date(t.date);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
     if (!byMonth.has(key)) byMonth.set(key, []);
     byMonth.get(key)!.push(t);
   }
@@ -37,10 +37,10 @@ export function buildMonthGroups(items: TaskListItem[], since: Date): MonthGroup
     if (!meta.has(key)) meta.set(key, { key, label: MONTHS[mm], year: yy, y: yy, mo: mm });
   };
   {
-    let yy = now.getFullYear();
-    let mm = now.getMonth();
-    const sy = since.getFullYear();
-    const sm = since.getMonth();
+    let yy = now.getUTCFullYear();
+    let mm = now.getUTCMonth();
+    const sy = since.getUTCFullYear();
+    const sm = since.getUTCMonth();
     let guard = 0;
     while ((yy > sy || (yy === sy && mm >= sm)) && guard++ < 600) {
       add(yy, mm);
@@ -53,7 +53,7 @@ export function buildMonthGroups(items: TaskListItem[], since: Date): MonthGroup
   }
   for (const t of items) {
     const d = new Date(t.date);
-    add(d.getFullYear(), d.getMonth());
+    add(d.getUTCFullYear(), d.getUTCMonth());
   }
 
   const months = [...meta.values()].sort((a, b) => b.y - a.y || b.mo - a.mo);

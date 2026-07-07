@@ -23,6 +23,10 @@ export default async function NewTaskPage({
     }),
   ]);
 
+  // Only prefill a project the picker actually offers (ignore archived/unknown ids).
+  const defaultProjectId =
+    sp.project && projects.some((p) => p.id === sp.project) ? sp.project : undefined;
+
   return (
     <div>
       <Link
@@ -33,7 +37,7 @@ export default async function NewTaskPage({
         Back to content
       </Link>
       <PageHeader title="Create content" description="Set up a new piece and assign it to a writer." />
-      <CreateTaskForm writers={writers} projects={projects} defaultProjectId={sp.project} />
+      <CreateTaskForm writers={writers} projects={projects} defaultProjectId={defaultProjectId} />
     </div>
   );
 }
