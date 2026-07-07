@@ -1,0 +1,206 @@
+// Mindcob Content Studio — data model
+// Roles/statuses/content-types are stored as plain strings and validated in
+// lib/constants.ts so the schema stays portable (Postgres <-> SQLite).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  username     String   @unique
+  passwordHash String
+  role         String // ADMIN | WRITER | REVIEWER | DESIGNER
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tasksCreated   Task[]           @relation("TaskCreatedBy")
+  tasksWriting   Task[]           @relation("TaskWriter")
+  tasksDesigning Task[]           @relation("TaskDesigner")
+  issuesRaised   ReviewIssue[]
+  reviews        ReviewApproval[]
+  statusChanges  StatusHistory[]
+  uploads        Upload[]
+  notifications  Notification[]
+  comments       Comment[]
+
+  projectsCreated    Project[]       @relation("ProjectCreatedBy")
+  projectMemberships ProjectMember[]
+}
+
+model Task {
+  id      String @id @default(cuid())
+  refCode String @unique
+  title   String
+
+  date        DateTime @default(now())
+  contentType String
+  status      String   @default("ASSIGNED")
+
+  // Project this content belongs to (required at the app layer; nullable in the
+  // DB so migrations stay painless).
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+
+  // Guide from the admin/manager
+  guideText   String?
+  guideFileId String?
+  guideFile   Upload? @relation("GuideFile", fields: [guideFileId], references: [id])
+
+  // Writer submission
+  writerId      String?
+  writer        User?   @relation("TaskWriter", fields: [writerId], references: [id])
+  contentText   String?
+  contentFileId String?
+  contentFile   Upload? @relation("ContentFile", fields: [contentFileId], references: [id])
+  words         Int     @default(0)
+
+  // Designer stage
+  designerId         String?
+  designer           User?   @relation("TaskDesigner", fields: [designerId], references: [id])
+  designInstructions String?
+  designAssetId      String?
+  designAsset        Upload? @relation("DesignAsset", fields: [designAssetId], references: [id])
+
+  // Publish stage
+  websiteLink String?
+  remarks     String?
+
+  createdById String
+  createdBy   User   @relation("TaskCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  issues        ReviewIssue[]
+  approvals     ReviewApproval[]
+  statusHistory StatusHistory[]
+  comments      Comment[]
+  notifications Notification[]
+
+  @@index([status])
+  @@index([writerId])
+  @@index([designerId])
+  @@index([date])
+  @@index([projectId])
+}
+
+model ReviewIssue {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  raisedById String
+  raisedBy   User     @relation(fields: [raisedById], references: [id])
+  message    String
+  fileId     String?
+  file       Upload?  @relation("IssueFile", fields: [fileId], references: [id])
+  resolved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model ReviewApproval {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer   User     @relation(fields: [reviewerId], references: [id])
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([taskId, reviewerId])
+  @@index([taskId])
+}
+
+model StatusHistory {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  fromStatus String?
+  toStatus   String
+  byId       String
+  by         User     @relation(fields: [byId], references: [id])
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model Upload {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mime         String
+  size         Int
+  path         String
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  guideFor   Task[]        @relation("GuideFile")
+  contentFor Task[]        @relation("ContentFile")
+  designFor  Task[]        @relation("DesignAsset")
+  issues     ReviewIssue[] @relation("IssueFile")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  website     String?
+  description String?
+  status      String   @default("ACTIVE") // ACTIVE | ARCHIVED
+  createdById String
+  createdBy   User     @relation("ProjectCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks   Task[]
+  members ProjectMember[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
