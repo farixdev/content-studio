@@ -1,0 +1,62 @@
+{
+  "name": "mindcob-content-studio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "dev:turbo": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
+    "seed": "tsx prisma/seed.ts",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "next": "15.x",
+    "react": "19.x",
+    "react-dom": "19.x",
+    "@prisma/client": "6.x",
+    "bcryptjs": "2.x",
+    "jose": "5.x",
+    "zod": "3.x",
+    "clsx": "2.x",
+    "tailwind-merge": "2.x",
+    "class-variance-authority": "0.7.x",
+    "lucide-react": "0.x",
+    "framer-motion": "11.x",
+    "sonner": "1.x",
+    "date-fns": "4.x",
+    "@radix-ui/react-dialog": "latest",
+    "@radix-ui/react-dropdown-menu": "latest",
+    "@radix-ui/react-tabs": "latest",
+    "@radix-ui/react-select": "latest",
+    "@radix-ui/react-avatar": "latest",
+    "@radix-ui/react-tooltip": "latest",
+    "@radix-ui/react-popover": "latest",
+    "@radix-ui/react-label": "latest",
+    "@radix-ui/react-checkbox": "latest",
+    "@radix-ui/react-scroll-area": "latest",
+    "@radix-ui/react-slot": "latest",
+    "@radix-ui/react-progress": "latest",
+    "@dnd-kit/core": "latest",
+    "@dnd-kit/sortable": "latest",
+    "@dnd-kit/utilities": "latest"
+  },
+  "devDependencies": {
+    "typescript": "5.x",
+    "@types/node": "22.x",
+    "@types/react": "19.x",
+    "@types/react-dom": "19.x",
+    "@types/bcryptjs": "2.x",
+    "prisma": "6.x",
+    "tsx": "4.x",
+    "tailwindcss": "3.x",
+    "postcss": "8.x",
+    "autoprefixer": "10.x"
+  }
+}
