@@ -47,7 +47,7 @@ model Task {
   // Project this content belongs to (required at the app layer; nullable in the
   // DB so migrations stay painless).
   projectId String?
-  project   Project? @relation(fields: [projectId], references: [id])
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Restrict)
 
   // Guide from the admin/manager
   guideText   String?
