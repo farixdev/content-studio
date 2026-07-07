@@ -1,34 +1,24 @@
-import { writeFile, mkdir, readFile } from "fs/promises";
-import path from "path";
-import crypto from "crypto";
-
-const UPLOAD_DIR = path.join(process.cwd(), "storage", "uploads");
-
 export interface SavedFile {
-  filename: string;
   originalName: string;
   mime: string;
   size: number;
-  path: string;
+  data: Uint8Array<ArrayBuffer>;
 }
 
-export async function saveUpload(file: File): Promise<SavedFile> {
-  await mkdir(UPLOAD_DIR, { recursive: true });
-  const ext = path.extname(file.name).slice(0, 12);
-  const filename = crypto.randomUUID() + ext;
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(UPLOAD_DIR, filename), buffer);
+/**
+ * Read an uploaded file into memory so it can be stored in the database.
+ * (Serverless platforms like Vercel have a read-only filesystem, so we don't
+ * write to disk.) The bytes are copied into a fresh ArrayBuffer-backed array so
+ * the type matches Prisma's `Bytes` input.
+ */
+export async function readFileUpload(file: File): Promise<SavedFile> {
+  const buf = await file.arrayBuffer();
+  const data = new Uint8Array(buf.byteLength);
+  data.set(new Uint8Array(buf));
   return {
-    filename,
     originalName: file.name,
     mime: file.type || "application/octet-stream",
-    size: buffer.length,
-    path: `storage/uploads/${filename}`,
+    size: data.byteLength,
+    data,
   };
-}
-
-export async function readUpload(filename: string): Promise<Buffer> {
-  // Guard against path traversal — only allow the bare filename.
-  const safe = path.basename(filename);
-  return readFile(path.join(UPLOAD_DIR, safe));
 }

@@ -26,7 +26,15 @@ async function upsertUser(opts: {
 async function main() {
   console.log("Seeding Mindcob Content Studio…");
 
-  const admin = await upsertUser({ name: "Studio Admin", username: "admin", password: "123", role: "ADMIN" });
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "123";
+  const admin = await upsertUser({ name: "Studio Admin", username: "admin", password: adminPassword, role: "ADMIN" });
+
+  // Production: set SEED_DEMO=false to create ONLY the admin (no demo accounts).
+  if (process.env.SEED_DEMO === "false") {
+    console.log("Admin-only seed complete. Login → username: admin");
+    return;
+  }
+
   const umar = await upsertUser({ name: "Umar", username: "umar", password: "umar123", role: "REVIEWER" });
   const waqar = await upsertUser({ name: "Waqar", username: "waqar", password: "waqar123", role: "REVIEWER" });
   const ayesha = await upsertUser({ name: "Ayesha Khan", username: "ayesha", password: "ayesha123", role: "WRITER" });
@@ -248,7 +256,7 @@ async function main() {
   });
 
   console.log("Seed complete.");
-  console.log("Admin login →  username: admin   password: 123");
+  console.log("Admin login →  username: admin");
 }
 
 main()
