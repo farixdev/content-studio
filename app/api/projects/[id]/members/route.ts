@@ -12,11 +12,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project) return notFound("Project not found.");
+  if (project.status === "ARCHIVED") return badRequest("That project is archived — reactivate it first.");
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return badRequest("Pick a member to add.");
 
-  const member = await prisma.user.findFirst({ where: { id: parsed.data.userId, active: true } });
+  const member = await prisma.user.findFirst({
+    where: { id: parsed.data.userId, active: true, role: { in: ["WRITER", "REVIEWER", "DESIGNER"] } },
+  });
   if (!member) return badRequest("That person is not available.");
 
   await prisma.projectMember.upsert({
