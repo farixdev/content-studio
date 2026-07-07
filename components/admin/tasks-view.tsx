@@ -45,16 +45,19 @@ export function TasksView({
     () => Array.from(new Set(initial.map((t) => t.writerName).filter(Boolean))).sort() as string[],
     [initial]
   );
-  const projects = useMemo(
-    () => Array.from(new Set(initial.map((t) => t.projectName).filter(Boolean))).sort() as string[],
-    [initial]
-  );
+  const projects = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of initial) if (t.projectId && t.projectName) map.set(t.projectId, t.projectName);
+    return [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [initial]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return tasks.filter((t) => {
       if (status !== "ALL" && t.status !== status) return false;
-      if (project !== "ALL" && t.projectName !== project) return false;
+      if (project !== "ALL" && t.projectId !== project) return false;
       if (type !== "ALL" && t.contentType !== type) return false;
       if (writer !== "ALL") {
         if (writer === "__UNASSIGNED__" ? t.writerName : t.writerName !== writer) return false;
@@ -115,8 +118,8 @@ export function TasksView({
               <SelectContent>
                 <SelectItem value="ALL">All projects</SelectItem>
                 {projects.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
                   </SelectItem>
                 ))}
               </SelectContent>
