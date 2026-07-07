@@ -36,3 +36,28 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     ...(newPassword ? { credentials: { username: target.username, password: newPassword } } : {}),
   });
 }
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const admin = await apiUser("ADMIN");
+  if (!admin) return unauthorized();
+  const { id } = await params;
+
+  const target = await prisma.user.findUnique({ where: { id } });
+  if (!target) return notFound("User not found.");
+  if (target.role === "ADMIN") return badRequest("The admin account can't be deleted.");
+
+  // Remove the member's activity records (these would otherwise block the delete
+  // on Postgres), then delete the user. Their assigned content is kept but
+  // becomes unassigned (writerId/designerId auto-null); notifications and project
+  // memberships cascade away.
+  await prisma.$transaction([
+    prisma.comment.deleteMany({ where: { authorId: id } }),
+    prisma.reviewApproval.deleteMany({ where: { reviewerId: id } }),
+    prisma.reviewIssue.deleteMany({ where: { raisedById: id } }),
+    prisma.statusHistory.deleteMany({ where: { byId: id } }),
+    prisma.upload.deleteMany({ where: { uploadedById: id } }),
+    prisma.user.delete({ where: { id } }),
+  ]);
+
+  return ok({ id });
+}

@@ -11,6 +11,8 @@ import {
   Loader2,
   Check,
   ShieldCheck,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,6 +95,7 @@ export function TeamView({ users }: { users: Member[] }) {
   const [newRole, setNewRole] = useState<Role>("WRITER");
 
   const [creds, setCreds] = useState<Creds | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
 
   async function addMember() {
     if (!newName.trim()) return toast.error("Enter a name.");
@@ -152,6 +155,27 @@ export function TeamView({ users }: { users: Member[] }) {
       setCreds(data.credentials);
     } catch {
       toast.error("Could not reset password.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deleteMember() {
+    if (!deleteTarget) return;
+    const m = deleteTarget;
+    setBusy(m.id);
+    try {
+      const res = await fetch(`/api/users/${m.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? "Could not delete member.");
+      } else {
+        setMembers((list) => list.filter((x) => x.id !== m.id));
+        setDeleteTarget(null);
+        toast.success(`${m.name} deleted.`);
+      }
+    } catch {
+      toast.error("Could not delete member.");
     } finally {
       setBusy(null);
     }
@@ -227,6 +251,9 @@ export function TeamView({ users }: { users: Member[] }) {
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => toggleActive(m)}>
                       <Power className="h-4 w-4" /> {m.active ? "Deactivate" : "Activate"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem destructive onSelect={() => setDeleteTarget(m)}>
+                      <Trash2 className="h-4 w-4" /> Delete member
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -312,6 +339,35 @@ export function TeamView({ users }: { users: Member[] }) {
               <Copy className="h-4 w-4" /> Copy both
             </Button>
             <Button onClick={() => setCreds(null)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <DialogTitle>Delete {deleteTarget?.name}?</DialogTitle>
+            <DialogDescription>
+              This permanently removes their account and login. Content assigned to them stays but
+              becomes unassigned. This can&apos;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteMember} disabled={busy === deleteTarget?.id}>
+              {busy === deleteTarget?.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Delete member
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
