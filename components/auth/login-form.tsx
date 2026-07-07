@@ -52,7 +52,6 @@ export function LoginForm() {
           value={username}
           autoComplete="username"
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="e.g. admin"
         />
       </div>
       <div className="space-y-1.5">
