@@ -17,14 +17,24 @@ export async function POST(req: Request) {
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid data.");
   const d = parsed.data;
 
+  // Only add members who exist, are active, and are a manageable role. Dedupe.
+  let validMemberIds: string[] = [];
+  if (d.memberIds && d.memberIds.length) {
+    const valid = await prisma.user.findMany({
+      where: { id: { in: d.memberIds }, active: true, role: { in: ["WRITER", "REVIEWER", "DESIGNER"] } },
+      select: { id: true },
+    });
+    validMemberIds = [...new Set(valid.map((u) => u.id))];
+  }
+
   const project = await prisma.project.create({
     data: {
       name: d.name.trim(),
       website: d.website?.trim() || null,
       description: d.description?.trim() || null,
       createdById: user.id,
-      ...(d.memberIds && d.memberIds.length
-        ? { members: { create: d.memberIds.map((userId) => ({ userId })) } }
+      ...(validMemberIds.length
+        ? { members: { create: validMemberIds.map((userId) => ({ userId })) } }
         : {}),
     },
   });

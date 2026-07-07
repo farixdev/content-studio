@@ -27,6 +27,7 @@ export async function POST(req: Request) {
 
   const project = await prisma.project.findUnique({ where: { id: d.projectId } });
   if (!project) return badRequest("That project no longer exists.");
+  if (project.status === "ARCHIVED") return badRequest("That project is archived — reactivate it first.");
 
   const refCode = await nextRefCode();
 
