@@ -8,13 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-const demos = [
-  { label: "Admin", username: "admin", password: "123" },
-  { label: "Writer", username: "ayesha", password: "ayesha123" },
-  { label: "Reviewer", username: "umar", password: "umar123" },
-  { label: "Designer", username: "sara", password: "sara123" },
-];
-
 export function LoginForm() {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -96,25 +89,6 @@ export function LoginForm() {
           </>
         )}
       </Button>
-
-      <div className="pt-2">
-        <p className="mb-2 text-center text-xs text-muted-foreground">Quick demo sign-in</p>
-        <div className="grid grid-cols-4 gap-2">
-          {demos.map((d) => (
-            <button
-              key={d.label}
-              type="button"
-              onClick={() => {
-                setUsername(d.username);
-                setPassword(d.password);
-              }}
-              className="rounded-lg border border-border bg-white px-2 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary-100 hover:bg-primary-50 hover:text-primary-700"
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-      </div>
     </form>
   );
 }

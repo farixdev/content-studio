@@ -3,11 +3,12 @@
 // lib/constants.ts so the schema stays portable (Postgres <-> SQLite).
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -136,11 +137,10 @@ model StatusHistory {
 
 model Upload {
   id           String   @id @default(cuid())
-  filename     String
   originalName String
   mime         String
   size         Int
-  path         String
+  data         Bytes
   uploadedById String
   uploadedBy   User     @relation(fields: [uploadedById], references: [id])
   createdAt    DateTime @default(now())
