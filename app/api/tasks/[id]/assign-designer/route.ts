@@ -15,6 +15,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return notFound("Task not found.");
+  // Design can only begin once content is fully reviewed, or when re-assigning a
+  // task already in the design stage — never from writing/review or later phases.
+  const designable = ["REVIEWED_BY_WAQAR", "DESIGN_NOW", "DESIGNING", "DESIGN_IMPROVEMENT", "DESIGNED"];
+  if (!designable.includes(task.status)) {
+    return badRequest("This task isn't ready for design yet — it needs both reviewer sign-offs.");
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);

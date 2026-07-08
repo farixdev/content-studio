@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { apiUser, badRequest, notFound, ok, unauthorized } from "@/lib/api";
 import { recordStatus, notifyAdmins, notifyUser } from "@/lib/tasks";
@@ -30,6 +31,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await prisma.reviewIssue.create({
       data: { taskId: id, raisedById: user.id, message: d.message.trim(), fileId: d.fileId || null },
     });
+    // Sending it back invalidates prior sign-offs — both reviewers must re-approve
+    // the revised content, so the two-distinct-sign-off gate isn't bypassed.
+    await prisma.reviewApproval.deleteMany({ where: { taskId: id } });
     await prisma.task.update({ where: { id }, data: { status: "IMPROVEMENT" } });
     await recordStatus(id, task.status, "IMPROVEMENT", user.id, "Changes requested");
     if (task.writerId) {
@@ -43,13 +47,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await prisma.reviewApproval.create({
       data: { taskId: id, reviewerId: user.id, note: d.note?.trim() || null },
     });
-  } catch {
-    // Duplicate approval by the same reviewer — ignore.
+  } catch (e) {
+    // Ignore ONLY a duplicate approval by the same reviewer; surface real errors.
+    if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e;
   }
+
   const count = await prisma.reviewApproval.count({ where: { taskId: id } });
   const to = statusAfterApproval(count);
-  if (to !== task.status) {
-    await prisma.task.update({ where: { id }, data: { status: to } });
+  // Advance monotonically via a guarded update so concurrent approvals can't
+  // regress the status (lost-update race).
+  const below =
+    to === "REVIEWED_BY_WAQAR"
+      ? ["WRITTEN", "ISSUE_RESOLVED", "REVIEWED_BY_UMAR"]
+      : ["WRITTEN", "ISSUE_RESOLVED"];
+  const moved = await prisma.task.updateMany({
+    where: { id, status: { in: below } },
+    data: { status: to },
+  });
+  if (moved.count > 0) {
     await recordStatus(id, task.status, to, user.id, `Approved by ${user.name}`);
   }
   await notifyAdmins("REVIEWED", `${user.name} approved: ${task.title}`, id);

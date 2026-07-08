@@ -42,8 +42,10 @@ export async function getRecentMessages(limit = 100): Promise<ChatMsg[]> {
 export async function getMessagesAfter(afterISO: string): Promise<ChatMsg[]> {
   const after = new Date(afterISO);
   if (isNaN(after.getTime())) return [];
+  // `gte` (not `gt`): DateTime is millisecond precision, so messages sharing the
+  // boundary millisecond must be re-fetched. The client de-dupes by id.
   const rows = await prisma.chatMessage.findMany({
-    where: { createdAt: { gt: after } },
+    where: { createdAt: { gte: after } },
     orderBy: { createdAt: "asc" },
     take: 200,
     include: AUTHOR,
@@ -78,7 +80,14 @@ export async function getRoster(): Promise<RosterMember[]> {
   }));
 }
 
-/** Mark a user active now (best-effort heartbeat). */
+/** Mark a user active now (best-effort). Throttled so a 10s poll doesn't write
+ * on every request — only refresh once per minute. */
 export async function touchPresence(userId: string): Promise<void> {
-  await prisma.user.update({ where: { id: userId }, data: { lastSeenAt: new Date() } }).catch(() => {});
+  const cutoff = new Date(Date.now() - 60_000);
+  await prisma.user
+    .updateMany({
+      where: { id: userId, OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: cutoff } }] },
+      data: { lastSeenAt: new Date() },
+    })
+    .catch(() => {});
 }

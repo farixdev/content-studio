@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   UserPlus,
@@ -90,6 +90,9 @@ export function TeamView({ users }: { users: Member[] }) {
   const router = useRouter();
   const [members, setMembers] = useState(users);
   const [tab, setTab] = useState<Role>("WRITER");
+
+  // Reflect server-side roster changes (live-refresh / other managers).
+  useEffect(() => setMembers(users), [users]);
   const [busy, setBusy] = useState<string | null>(null);
 
   const [addOpen, setAddOpen] = useState(false);

@@ -29,6 +29,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!parsed.success) return badRequest("Invalid data.");
   const d = parsed.data;
 
+  // Mirror the create-time guard: don't move content to a missing/archived project.
+  if (d.projectId) {
+    const project = await prisma.project.findUnique({ where: { id: d.projectId } });
+    if (!project) return badRequest("That project no longer exists.");
+    if (project.status === "ARCHIVED") return badRequest("That project is archived.");
+  }
+
   const task = await prisma.task.update({
     where: { id },
     data: {

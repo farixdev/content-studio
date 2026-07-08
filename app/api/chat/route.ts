@@ -35,8 +35,10 @@ export async function POST(req: Request) {
     include: { author: { select: { name: true, role: true } } },
   });
 
-  // @mentions → notify the tagged members (match @username).
-  const tokens = [...body.matchAll(/@([a-zA-Z0-9_]+)/g)].map((m) => m[1].toLowerCase());
+  // @mentions → notify the tagged members. Must start a token (^ or space) so
+  // emails like me@example.com don't spuriously tag "example". Matches the client
+  // highlighter's standalone-token rule.
+  const tokens = [...body.matchAll(/(?:^|\s)@([a-z0-9]+)/gi)].map((m) => m[1].toLowerCase());
   if (tokens.length) {
     const mentioned = await prisma.user.findMany({
       where: { username: { in: tokens }, active: true, id: { not: user.id } },

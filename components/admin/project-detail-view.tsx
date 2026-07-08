@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -74,6 +74,12 @@ export function ProjectDetailView({
   const [status, setStatus] = useState(project.status);
   const [busy, setBusy] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Reflect server-side changes (live-refresh / concurrent edits).
+  useEffect(() => {
+    setMembers(project.members);
+    setStatus(project.status);
+  }, [project.members, project.status]);
 
   const [editOpen, setEditOpen] = useState(false);
   const [name, setName] = useState(project.name);
@@ -157,6 +163,7 @@ export function ProjectDetailView({
       });
       if (!res.ok) throw new Error();
       setStatus(next);
+      router.refresh();
       toast.success(next === "ARCHIVED" ? "Project archived." : "Project reactivated.");
     } catch {
       toast.error("Could not update project.");
