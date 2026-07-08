@@ -18,6 +18,8 @@ import {
   PenLine,
   Rocket,
   Hash,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,14 +63,17 @@ type Candidate = { id: string; name: string; username: string; role: Role };
 export function ProjectDetailView({
   project,
   candidates,
+  canDelete,
 }: {
   project: ProjectDetail;
   candidates: Candidate[];
+  canDelete?: boolean;
 }) {
   const router = useRouter();
   const [members, setMembers] = useState<ProjectMemberInfo[]>(project.members);
   const [status, setStatus] = useState(project.status);
   const [busy, setBusy] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const [editOpen, setEditOpen] = useState(false);
   const [name, setName] = useState(project.name);
@@ -160,6 +165,24 @@ export function ProjectDetailView({
     }
   }
 
+  async function deleteProject() {
+    setBusy("delete");
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? "Could not delete project.");
+        return;
+      }
+      toast.success("Project deleted.");
+      router.push("/admin/projects");
+    } catch {
+      toast.error("Could not delete project.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <div>
       <Link
@@ -216,8 +239,43 @@ export function ProjectDetailView({
               </>
             )}
           </Button>
+          {canDelete && (
+            <Button
+              variant="ghost"
+              className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Delete project */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <DialogTitle>Delete {project.name}?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes the project and all {project.stats.total} content piece
+              {project.stats.total === 1 ? "" : "s"} inside it, with their history. This can&apos;t
+              be undone. To keep the content but hide the project, use Archive instead.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" disabled={busy === "delete"} onClick={deleteProject}>
+              {busy === "delete" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Delete project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

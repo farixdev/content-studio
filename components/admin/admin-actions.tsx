@@ -13,6 +13,7 @@ import {
   ArrowRight,
   ExternalLink,
   Code2,
+  Trash2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,11 +48,13 @@ export function AdminActions({
   writers,
   designers,
   developers,
+  canDelete,
 }: {
   task: TaskDetail;
   writers: People;
   designers: People;
   developers: People;
+  canDelete?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -72,6 +75,7 @@ export function AdminActions({
   const [developerId, setDeveloperId] = useState(task.developer?.id ?? "");
   const [devInstructions, setDevInstructions] = useState(task.devInstructions ?? "");
   const [rejectReason, setRejectReason] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const [editOpen, setEditOpen] = useState(false);
   const [title, setTitle] = useState(task.title);
@@ -101,6 +105,24 @@ export function AdminActions({
       }
     } catch {
       toast.error("Something went wrong.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deleteTask() {
+    setBusy("delete");
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? "Could not delete.");
+        return;
+      }
+      toast.success("Content deleted.");
+      router.push("/admin/tasks");
+    } catch {
+      toast.error("Could not delete.");
     } finally {
       setBusy(null);
     }
@@ -248,6 +270,17 @@ export function AdminActions({
             Cancel
           </Button>
         </div>
+        {canDelete && (
+          <Button
+            variant="ghost"
+            className="mt-2 w-full text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+            disabled={busy !== null}
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete permanently
+          </Button>
+        )}
       </Card>
 
       {/* Issue dialog */}
@@ -548,6 +581,28 @@ export function AdminActions({
             >
               {busy === "reject-design" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
               Reject design
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete content */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this content?</DialogTitle>
+            <DialogDescription>
+              This permanently removes &ldquo;{task.title}&rdquo; and its whole history. This
+              can&apos;t be undone. (To pause it instead, use Cancel.)
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" disabled={busy !== null} onClick={deleteTask}>
+              {busy === "delete" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Delete permanently
             </Button>
           </DialogFooter>
         </DialogContent>
