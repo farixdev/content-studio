@@ -37,6 +37,7 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
 
   const activeRef = useRef<Contact | null>(null);
   activeRef.current = active;
+  const mutating = useRef(0); // in-flight send/delete count — pauses poll reconcile
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -79,6 +80,9 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
         const res = await fetch(`/api/chat/${active!.id}`);
         if (!res.ok || !live) return;
         const data = await res.json();
+        // Don't overwrite local state while a send/delete is in flight — a stale
+        // snapshot would make the just-sent message vanish (or a deleted one return).
+        if (mutating.current > 0) return;
         const incoming: Msg[] = data.messages ?? [];
         setMessages((prev) => {
           const same =
@@ -117,6 +121,7 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
     const body = text.trim();
     if (!body || !active) return;
     setSending(true);
+    mutating.current += 1;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -134,12 +139,14 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
       toast.error("Could not send.");
     } finally {
       setSending(false);
+      mutating.current -= 1;
     }
   }
 
   async function del(id: string) {
     const removed = messages.find((m) => m.id === id);
     setMessages((list) => list.filter((m) => m.id !== id));
+    mutating.current += 1;
     const restore = () => {
       if (removed) {
         setMessages((list) =>
@@ -155,6 +162,8 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
       if (!res.ok) restore();
     } catch {
       restore();
+    } finally {
+      mutating.current -= 1;
     }
   }
 

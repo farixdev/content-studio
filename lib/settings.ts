@@ -77,24 +77,36 @@ export async function getStatusesForSettings(): Promise<SettingsStatus[]> {
   return [...builtins, ...added];
 }
 
-/** Content types from the DB, falling back to the built-in defaults if the
- * Manager hasn't customised them yet. */
-export async function getContentTypes(): Promise<string[]> {
+/** Seed the default content types EXACTLY once, tracked by an AppMeta marker so
+ * a list the Manager intentionally emptied is never silently re-seeded.
+ * Idempotent and race-safe (createMany skipDuplicates + marker upsert). */
+export async function ensureContentTypesSeeded(): Promise<void> {
   try {
-    const rows = await prisma.contentType.findMany({ orderBy: [{ order: "asc" }, { name: "asc" }] });
-    return rows.length ? rows.map((r) => r.name) : CONTENT_TYPES;
+    const marker = await prisma.appMeta.findUnique({ where: { key: "contentTypesSeeded" } });
+    if (marker) return;
+    await prisma.contentType.createMany({
+      data: CONTENT_TYPES.map((name, i) => ({ name, order: i })),
+      skipDuplicates: true,
+    });
+    await prisma.appMeta.upsert({
+      where: { key: "contentTypesSeeded" },
+      create: { key: "contentTypesSeeded", value: "1" },
+      update: {},
+    });
   } catch {
-    return CONTENT_TYPES;
+    /* best-effort; getContentTypes falls back to defaults on a genuine DB error */
   }
 }
 
-/** Seed the ContentType table with the defaults the first time Settings opens,
- * so the Manager has real rows to edit. Idempotent. */
-export async function seedContentTypesIfEmpty(): Promise<void> {
-  const count = await prisma.contentType.count();
-  if (count > 0) return;
-  await prisma.contentType.createMany({
-    data: CONTENT_TYPES.map((name, i) => ({ name, order: i })),
-    skipDuplicates: true,
-  });
+/** Content types from the DB (seeding the defaults once on first use). After the
+ * first seed the DB is the source of truth — an emptied list stays empty. Falls
+ * back to the built-in defaults only on a DB error. */
+export async function getContentTypes(): Promise<string[]> {
+  try {
+    await ensureContentTypesSeeded();
+    const rows = await prisma.contentType.findMany({ orderBy: [{ order: "asc" }, { name: "asc" }] });
+    return rows.map((r) => r.name);
+  } catch {
+    return CONTENT_TYPES;
+  }
 }

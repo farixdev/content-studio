@@ -1,6 +1,8 @@
 // Central place for roles, statuses, and content types.
 // Everything the workflow keys off lives here so it is easy to tweak.
 
+import { cache } from "react";
+
 export type Role = "ADMIN" | "WRITER" | "REVIEWER" | "DESIGNER" | "DEVELOPER";
 
 export const ROLES: Role[] = ["ADMIN", "WRITER", "REVIEWER", "DESIGNER", "DEVELOPER"];
@@ -134,9 +136,27 @@ export interface StatusOverride {
   label: string;
   color: string | null;
 }
-let OVERRIDES: Record<string, { label: string; color: string | null }> = {};
+type OverrideMap = Record<string, { label: string; color: string | null }>;
+
+// The registry must be REQUEST-SCOPED on the server (many requests share one
+// Node worker; a module-level global would let concurrent requests clobber each
+// other's overrides and cause hydration mismatches). React's cache() gives a
+// fresh holder per server request. On the client there's a single session, so a
+// module-level map is correct. currentOverrides() picks the right one and is only
+// ever invoked in its matching environment.
+const serverOverrides = cache((): { map: OverrideMap } => ({ map: {} }));
+let clientOverrides: OverrideMap = {};
+
+function currentOverrides(): OverrideMap {
+  return typeof window === "undefined" ? serverOverrides().map : clientOverrides;
+}
+
 export function applyStatusSettings(list: StatusOverride[]) {
-  OVERRIDES = Object.fromEntries(list.map((s) => [s.key, { label: s.label, color: s.color }]));
+  const map: OverrideMap = Object.fromEntries(
+    list.map((s) => [s.key, { label: s.label, color: s.color }])
+  );
+  if (typeof window === "undefined") serverOverrides().map = map;
+  else clientOverrides = map;
 }
 
 // Resolve a status's display without touching the override registry — used for
@@ -157,7 +177,7 @@ export function previewStatus(
 }
 
 export function statusMeta(status: string): StatusMeta {
-  const o = OVERRIDES[status];
+  const o = currentOverrides()[status];
   const base = STATUS_META[status as Status];
   if (o) {
     if (o.color) {
