@@ -109,46 +109,70 @@ export const PHASE_ACCENT: Record<Phase, string> = {
   Closed: "text-rose-600",
 };
 
-// Colour presets for Manager-defined custom statuses.
-export const CUSTOM_STATUS_COLORS: Record<string, { badge: string; dot: string }> = {
+// Named colour palette the Manager can choose from when editing/adding a status.
+export const STATUS_COLORS: Record<string, { badge: string; dot: string }> = {
   slate: { badge: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-400" },
   blue: { badge: "bg-blue-100 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
+  sky: { badge: "bg-sky-100 text-sky-700 ring-sky-200", dot: "bg-sky-500" },
   violet: { badge: "bg-violet-100 text-violet-700 ring-violet-200", dot: "bg-violet-500" },
-  amber: { badge: "bg-amber-100 text-amber-800 ring-amber-200", dot: "bg-amber-500" },
-  emerald: { badge: "bg-emerald-100 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
-  rose: { badge: "bg-rose-100 text-rose-700 ring-rose-200", dot: "bg-rose-500" },
-  cyan: { badge: "bg-cyan-100 text-cyan-700 ring-cyan-200", dot: "bg-cyan-500" },
+  indigo: { badge: "bg-indigo-100 text-indigo-700 ring-indigo-200", dot: "bg-indigo-500" },
   fuchsia: { badge: "bg-fuchsia-100 text-fuchsia-700 ring-fuchsia-200", dot: "bg-fuchsia-500" },
+  amber: { badge: "bg-amber-100 text-amber-800 ring-amber-200", dot: "bg-amber-500" },
+  orange: { badge: "bg-orange-100 text-orange-700 ring-orange-200", dot: "bg-orange-500" },
+  emerald: { badge: "bg-emerald-100 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
+  teal: { badge: "bg-teal-100 text-teal-700 ring-teal-200", dot: "bg-teal-500" },
+  cyan: { badge: "bg-cyan-100 text-cyan-700 ring-cyan-200", dot: "bg-cyan-500" },
+  rose: { badge: "bg-rose-100 text-rose-700 ring-rose-200", dot: "bg-rose-500" },
 };
-export const CUSTOM_STATUS_COLOR_NAMES = Object.keys(CUSTOM_STATUS_COLORS);
+export const STATUS_COLOR_NAMES = Object.keys(STATUS_COLORS);
 
-// Runtime registry of custom statuses so statusMeta() can render their label +
-// colour anywhere a badge is shown. Populated on the server per-request (from the
-// DB) and hydrated on the client via <CustomStatusProvider>.
-export interface CustomStatusDef {
+// Runtime registry of Manager overrides (label + optional colour) keyed by
+// status key. Populated on the server per-request (root layout) and hydrated on
+// the client via <StatusHydrator> so every badge reflects the Manager's edits.
+export interface StatusOverride {
   key: string;
   label: string;
-  color: string;
+  color: string | null;
 }
-let CUSTOM_REGISTRY: Record<string, CustomStatusDef> = {};
-export function setCustomStatuses(list: CustomStatusDef[]) {
-  CUSTOM_REGISTRY = Object.fromEntries(list.map((c) => [c.key, c]));
+let OVERRIDES: Record<string, { label: string; color: string | null }> = {};
+export function applyStatusSettings(list: StatusOverride[]) {
+  OVERRIDES = Object.fromEntries(list.map((s) => [s.key, { label: s.label, color: s.color }]));
 }
-export function customStatusList(): CustomStatusDef[] {
-  return Object.values(CUSTOM_REGISTRY);
+
+// Resolve a status's display without touching the override registry — used for
+// live previews in Settings as the Manager edits.
+export function previewStatus(
+  key: string,
+  label: string,
+  color: string | null
+): { label: string; badge: string; dot: string } {
+  if (color) {
+    const c = STATUS_COLORS[color] ?? STATUS_COLORS.slate;
+    return { label, badge: c.badge, dot: c.dot };
+  }
+  const base = STATUS_META[key as Status];
+  if (base) return { label, badge: base.badge, dot: base.dot };
+  const c = STATUS_COLORS.slate;
+  return { label, badge: c.badge, dot: c.dot };
 }
 
 export function statusMeta(status: string): StatusMeta {
-  const built = STATUS_META[status as Status];
-  if (built) return built;
-  const custom = CUSTOM_REGISTRY[status];
-  if (custom) {
-    const c = CUSTOM_STATUS_COLORS[custom.color] ?? CUSTOM_STATUS_COLORS.slate;
-    return { label: custom.label, phase: "Writing", badge: c.badge, dot: c.dot };
+  const o = OVERRIDES[status];
+  const base = STATUS_META[status as Status];
+  if (o) {
+    if (o.color) {
+      const c = STATUS_COLORS[o.color] ?? STATUS_COLORS.slate;
+      return { label: o.label, phase: base?.phase ?? "Writing", badge: c.badge, dot: c.dot };
+    }
+    if (base) return { ...base, label: o.label };
+    const c = STATUS_COLORS.slate;
+    return { label: o.label, phase: "Writing", badge: c.badge, dot: c.dot };
   }
-  return { label: status, phase: "Writing", badge: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-400" };
+  if (base) return base;
+  return { label: status, phase: "Writing", badge: STATUS_COLORS.slate.badge, dot: STATUS_COLORS.slate.dot };
 }
 
+// A built-in pipeline status (drives the automated role gates).
 export function isStatus(value: string): value is Status {
   return value in STATUS_META;
 }

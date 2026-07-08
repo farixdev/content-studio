@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2, Trash2, Tags } from "lucide-react";
+import { Plus, Loader2, Trash2, RotateCcw, Check, Tags, FileType2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,149 +14,321 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { EmptyState } from "@/components/ui/empty-state";
-import { CUSTOM_STATUS_COLORS, CUSTOM_STATUS_COLOR_NAMES } from "@/lib/constants";
+import {
+  STATUS_COLORS,
+  STATUS_COLOR_NAMES,
+  applyStatusSettings,
+  previewStatus,
+} from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-interface CustomStatus {
-  id: string;
+interface SettingsStatus {
+  id: string | null;
+  key: string;
   label: string;
-  color: string;
+  color: string | null;
+  pipeline: boolean;
+  phase: string | null;
 }
 
-export function SettingsView({ initial }: { initial: CustomStatus[] }) {
-  const router = useRouter();
-  const [label, setLabel] = useState("");
-  const [color, setColor] = useState("blue");
-  const [busy, setBusy] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
+const DEFAULT_COLOR = "__default__";
 
-  async function add() {
-    if (!label.trim()) return toast.error("Name the status first.");
-    setBusy(true);
+function StatusRow({ status, onChanged }: { status: SettingsStatus; onChanged: () => void }) {
+  const [label, setLabel] = useState(status.label);
+  const [color, setColor] = useState(status.color ?? DEFAULT_COLOR);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLabel(status.label);
+    setColor(status.color ?? DEFAULT_COLOR);
+  }, [status.label, status.color]);
+
+  const colorValue = color === DEFAULT_COLOR ? null : color;
+  const dirty = label.trim() !== status.label || colorValue !== (status.color ?? null);
+  const preview = previewStatus(status.key, label.trim() || status.key, colorValue);
+  const overridden = status.pipeline && status.id !== null;
+
+  async function post(body: unknown, msg: string) {
+    setBusy(msg);
     try {
       const res = await fetch("/api/settings/statuses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: label.trim(), color }),
+        body: JSON.stringify(body),
       });
-      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data.error ?? "Could not add the status.");
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error ?? "Could not save.");
       } else {
-        toast.success("Custom status added.");
-        setLabel("");
-        router.refresh();
+        onChanged();
       }
     } catch {
-      toast.error("Could not add the status.");
+      toast.error("Could not save.");
     } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove(id: string) {
-    setDeleting(id);
-    try {
-      const res = await fetch(`/api/settings/statuses/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        toast.error("Could not remove.");
-      } else {
-        toast.success("Removed.");
-        router.refresh();
-      }
-    } catch {
-      toast.error("Could not remove.");
-    } finally {
-      setDeleting(null);
+      setBusy(null);
     }
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="flex flex-wrap items-center gap-2 py-2">
+      <span
+        className={cn(
+          "inline-flex min-w-[112px] items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset",
+          preview.badge
+        )}
+      >
+        <span className={cn("h-1.5 w-1.5 rounded-full", preview.dot)} />
+        {preview.label}
+      </span>
+      <Input value={label} onChange={(e) => setLabel(e.target.value)} className="h-9 w-44" />
+      <Select value={color} onValueChange={setColor}>
+        <SelectTrigger className="h-9 w-[132px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={DEFAULT_COLOR}>Default</SelectItem>
+          {STATUS_COLOR_NAMES.map((c) => (
+            <SelectItem key={c} value={c}>
+              <span className="flex items-center gap-2">
+                <span className={cn("h-2.5 w-2.5 rounded-full", STATUS_COLORS[c].dot)} />
+                <span className="capitalize">{c}</span>
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {status.pipeline ? (
+        <span className="text-[11px] text-muted-foreground">{status.phase} · auto</span>
+      ) : (
+        <span className="text-[11px] text-muted-foreground">manual</span>
+      )}
+      <div className="ml-auto flex items-center gap-1">
+        {dirty && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy !== null || !label.trim()}
+            onClick={() => post({ action: "save", key: status.key, label: label.trim(), color: colorValue }, "save")}
+          >
+            {busy === "save" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+            Save
+          </Button>
+        )}
+        {status.pipeline
+          ? overridden && (
+              <button
+                onClick={() => post({ action: "remove", key: status.key }, "reset")}
+                disabled={busy !== null}
+                title="Reset to default"
+                className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                {busy === "reset" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              </button>
+            )
+          : (
+              <button
+                onClick={() => post({ action: "remove", key: status.key }, "del")}
+                disabled={busy !== null}
+                title="Delete status"
+                className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-rose-50 hover:text-rose-600"
+              >
+                {busy === "del" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              </button>
+            )}
+      </div>
+    </div>
+  );
+}
+
+export function SettingsView({
+  statuses: initialStatuses,
+  contentTypes: initialTypes,
+}: {
+  statuses: SettingsStatus[];
+  contentTypes: string[];
+}) {
+  const router = useRouter();
+  const [statuses, setStatuses] = useState(initialStatuses);
+  const [types, setTypes] = useState(initialTypes);
+
+  // New-status form
+  const [newLabel, setNewLabel] = useState("");
+  const [newColor, setNewColor] = useState("blue");
+  const [addingStatus, setAddingStatus] = useState(false);
+  // New content-type form
+  const [newType, setNewType] = useState("");
+  const [typeBusy, setTypeBusy] = useState<string | null>(null);
+
+  useEffect(() => setStatuses(initialStatuses), [initialStatuses]);
+  useEffect(() => setTypes(initialTypes), [initialTypes]);
+
+  // Keep the client status registry in sync with what's shown, so every badge
+  // across the app reflects edits live (without a full reload).
+  useEffect(() => {
+    applyStatusSettings(statuses.map((s) => ({ key: s.key, label: s.label, color: s.color })));
+  }, [statuses]);
+
+  async function addStatus() {
+    if (!newLabel.trim()) return toast.error("Name the status first.");
+    setAddingStatus(true);
+    try {
+      const res = await fetch("/api/settings/statuses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "add", label: newLabel.trim(), color: newColor }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) toast.error(d.error ?? "Could not add.");
+      else {
+        toast.success("Status added.");
+        setNewLabel("");
+        router.refresh();
+      }
+    } catch {
+      toast.error("Could not add.");
+    } finally {
+      setAddingStatus(false);
+    }
+  }
+
+  async function changeType(action: "add" | "remove", name: string) {
+    setTypeBusy(name);
+    try {
+      const res = await fetch("/api/settings/content-types", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, name }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) toast.error(d.error ?? "Could not update.");
+      else {
+        if (action === "add") setNewType("");
+        router.refresh();
+      }
+    } catch {
+      toast.error("Could not update.");
+    } finally {
+      setTypeBusy(null);
+    }
+  }
+
+  const pipeline = statuses.filter((s) => s.pipeline);
+  const added = statuses.filter((s) => !s.pipeline);
+
+  return (
+    <div className="max-w-3xl space-y-6">
+      {/* Statuses */}
       <Card className="p-6">
-        <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
           <Tags className="h-4 w-4 text-primary" />
-          Add a custom status
+          Statuses
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <p className="mb-4 text-xs text-muted-foreground">
+          Rename or recolour any status — it updates everywhere. “Auto” statuses are set by the
+          workflow as people do their work; add your own for stages you set by hand.
+        </p>
+
+        <div className="divide-y divide-border">
+          {pipeline.map((s) => (
+            <StatusRow key={s.key} status={s} onChanged={() => router.refresh()} />
+          ))}
+        </div>
+
+        {added.length > 0 && (
+          <>
+            <p className="mb-1 mt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Statuses you added
+            </p>
+            <div className="divide-y divide-border">
+              {added.map((s) => (
+                <StatusRow key={s.key} status={s} onChanged={() => router.refresh()} />
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="mt-5 flex flex-wrap items-end gap-2 rounded-xl bg-muted/40 p-3">
           <div className="flex-1 space-y-1.5">
-            <Label htmlFor="status-name">Status name</Label>
+            <Label className="text-xs">Add a status</Label>
             <Input
-              id="status-name"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
               placeholder="e.g. Client Review"
-              onKeyDown={(e) => e.key === "Enter" && add()}
+              className="h-9"
+              onKeyDown={(e) => e.key === "Enter" && addStatus()}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label>Colour</Label>
-            <Select value={color} onValueChange={setColor}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CUSTOM_STATUS_COLOR_NAMES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    <span className="flex items-center gap-2">
-                      <span className={"h-2.5 w-2.5 rounded-full " + CUSTOM_STATUS_COLORS[c].dot} />
-                      <span className="capitalize">{c}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={add} disabled={busy}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          <Select value={newColor} onValueChange={setNewColor}>
+            <SelectTrigger className="h-9 w-[132px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_COLOR_NAMES.map((c) => (
+                <SelectItem key={c} value={c}>
+                  <span className="flex items-center gap-2">
+                    <span className={cn("h-2.5 w-2.5 rounded-full", STATUS_COLORS[c].dot)} />
+                    <span className="capitalize">{c}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={addStatus} disabled={addingStatus} className="h-9">
+            {addingStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Add
           </Button>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Custom statuses appear in the manual <span className="font-medium">Set status</span> menu on any
-          piece of content — useful for stages the built-in pipeline doesn&apos;t cover.
-        </p>
       </Card>
 
+      {/* Content types */}
       <Card className="p-6">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Your custom statuses
+        <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <FileType2 className="h-4 w-4 text-primary" />
+          Content types
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground">
+          The options shown when creating or editing a piece of content.
         </p>
-        {initial.length === 0 ? (
-          <EmptyState icon={Tags} title="None yet" description="Add your first custom status above." />
-        ) : (
-          <ul className="divide-y divide-border">
-            {initial.map((s) => {
-              const c = CUSTOM_STATUS_COLORS[s.color] ?? CUSTOM_STATUS_COLORS.slate;
-              return (
-                <li key={s.id} className="flex items-center justify-between py-2.5">
-                  <span
-                    className={
-                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset " +
-                      c.badge
-                    }
-                  >
-                    <span className={"h-1.5 w-1.5 rounded-full " + c.dot} />
-                    {s.label}
-                  </span>
-                  <button
-                    onClick={() => remove(s.id)}
-                    disabled={deleting === s.id}
-                    className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-rose-50 hover:text-rose-600"
-                    aria-label="Remove"
-                  >
-                    {deleting === s.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {types.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-foreground"
+            >
+              {t}
+              <button
+                onClick={() => changeType("remove", t)}
+                disabled={typeBusy === t}
+                className="text-muted-foreground transition hover:text-rose-600"
+                aria-label={`Remove ${t}`}
+              >
+                {typeBusy === t ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              </button>
+            </span>
+          ))}
+          {types.length === 0 && <span className="text-sm text-muted-foreground">No content types yet.</span>}
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="flex-1 space-y-1.5">
+            <Label className="text-xs">Add a content type</Label>
+            <Input
+              value={newType}
+              onChange={(e) => setNewType(e.target.value)}
+              placeholder="e.g. Newsletter"
+              className="h-9"
+              onKeyDown={(e) => e.key === "Enter" && newType.trim() && changeType("add", newType.trim())}
+            />
+          </div>
+          <Button
+            onClick={() => newType.trim() && changeType("add", newType.trim())}
+            disabled={typeBusy !== null || !newType.trim()}
+            className="h-9"
+          >
+            {typeBusy === newType.trim() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Add
+          </Button>
+        </div>
       </Card>
     </div>
   );

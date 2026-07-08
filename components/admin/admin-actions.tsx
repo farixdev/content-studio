@@ -36,7 +36,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { UploadField, type UploadedFile } from "@/components/upload-field";
-import { CONTENT_TYPES, STATUS_ORDER, statusMeta } from "@/lib/constants";
+import { STATUS_ORDER, statusMeta } from "@/lib/constants";
 import { isReviewPhase, isFullyReviewed, isDesignReview } from "@/lib/workflow";
 import type { TaskDetail } from "@/lib/detail";
 import { toast } from "sonner";
@@ -48,16 +48,23 @@ export function AdminActions({
   writers,
   designers,
   developers,
-  customStatuses = [],
+  addedStatuses = [],
+  contentTypes = [],
   canDelete,
 }: {
   task: TaskDetail;
   writers: People;
   designers: People;
   developers: People;
-  customStatuses?: { key: string; label: string }[];
+  addedStatuses?: { key: string; label: string }[];
+  contentTypes?: string[];
   canDelete?: boolean;
 }) {
+  // Always keep the piece's current type selectable, even if it was removed
+  // from the Settings list later.
+  const typeOptions = contentTypes.includes(task.contentType)
+    ? contentTypes
+    : [task.contentType, ...contentTypes];
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -223,9 +230,9 @@ export function AdminActions({
                   {statusMeta(s).label}
                 </SelectItem>
               ))}
-              {customStatuses.map((s) => (
+              {addedStatuses.map((s) => (
                 <SelectItem key={s.key} value={s.key}>
-                  {s.label} · custom
+                  {s.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -422,7 +429,7 @@ export function AdminActions({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CONTENT_TYPES.map((t) => (
+                    {typeOptions.map((t) => (
                       <SelectItem key={t} value={t}>
                         {t}
                       </SelectItem>
