@@ -6,7 +6,7 @@ export type Role = "ADMIN" | "WRITER" | "REVIEWER" | "DESIGNER" | "DEVELOPER";
 export const ROLES: Role[] = ["ADMIN", "WRITER", "REVIEWER", "DESIGNER", "DEVELOPER"];
 
 export const ROLE_LABELS: Record<Role, string> = {
-  ADMIN: "Admin / Manager",
+  ADMIN: "Manager",
   WRITER: "Content Writer",
   REVIEWER: "Reviewer",
   DESIGNER: "Designer",

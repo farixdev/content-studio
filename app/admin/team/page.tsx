@@ -7,9 +7,16 @@ export default async function TeamPage() {
   const rows = await prisma.user.findMany({
     where: { role: { in: ["WRITER", "REVIEWER", "DESIGNER", "DEVELOPER"] } },
     orderBy: { createdAt: "asc" },
-    select: { id: true, name: true, username: true, role: true, active: true },
+    select: { id: true, name: true, username: true, role: true, active: true, plainPassword: true },
   });
-  const users = rows.map((u) => ({ ...u, role: u.role as Role }));
+  const users = rows.map((u) => ({
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    role: u.role as Role,
+    active: u.active,
+    password: u.plainPassword,
+  }));
 
   return (
     <div>

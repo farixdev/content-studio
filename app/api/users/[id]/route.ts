@@ -24,15 +24,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return badRequest(parsed.error.issues[0]?.message ?? "Invalid data.");
   }
 
-  const data: { active?: boolean; passwordHash?: string } = {};
+  const data: { active?: boolean; passwordHash?: string; plainPassword?: string } = {};
   let newPassword: string | undefined;
   if (parsed.data.active !== undefined) data.active = parsed.data.active;
   if (parsed.data.resetPassword || parsed.data.newPassword) {
-    // Either the admin chose a password, or we generate a strong one. The old
+    // Either the manager chose a password, or we generate a strong one. The old
     // password stops working the moment this update lands.
     newPassword = parsed.data.newPassword?.trim() || generatePassword(10);
     if (newPassword.length < 6) return badRequest("Password must be at least 6 characters.");
     data.passwordHash = await hashPassword(newPassword);
+    data.plainPassword = newPassword;
   }
 
   await prisma.user.update({ where: { id }, data });

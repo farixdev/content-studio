@@ -52,6 +52,7 @@ interface Member {
   username: string;
   role: Role;
   active: boolean;
+  password?: string | null;
 }
 type Creds = { username: string; password: string };
 
@@ -115,7 +116,7 @@ export function TeamView({ users }: { users: Member[] }) {
       if (!res.ok) {
         toast.error(data.error ?? "Could not add member.");
       } else {
-        setMembers((m) => [...m, data.user]);
+        setMembers((m) => [...m, { ...data.user, password: data.credentials?.password }]);
         setCreds(data.credentials);
         setAddOpen(false);
         setNewName("");
@@ -168,6 +169,9 @@ export function TeamView({ users }: { users: Member[] }) {
         toast.error(data.error ?? "Could not reset password.");
         return;
       }
+      setMembers((list) =>
+        list.map((x) => (x.id === m.id ? { ...x, password: data.credentials?.password } : x))
+      );
       setResetTarget(null);
       setCreds(data.credentials);
       toast.success(`Password changed — ${m.name.split(" ")[0]}'s old password no longer works.`);
@@ -346,6 +350,19 @@ export function TeamView({ users }: { users: Member[] }) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Current login
+              </p>
+              <CopyRow label="Username" value={resetTarget?.username ?? ""} />
+              {resetTarget?.password ? (
+                <CopyRow label="Password" value={resetTarget.password} />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Current password isn&apos;t stored for this member — set a new one below.
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -410,7 +427,7 @@ export function TeamView({ users }: { users: Member[] }) {
             </div>
             <DialogTitle>Login credentials</DialogTitle>
             <DialogDescription>
-              Share these with the member. For security, the password won&apos;t be shown again.
+              Share these with the member. You can view them again anytime via Reset password.
             </DialogDescription>
           </DialogHeader>
           {creds && (
