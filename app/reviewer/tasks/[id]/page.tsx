@@ -26,7 +26,7 @@ export default async function ReviewerTaskPage({ params }: { params: Promise<{ i
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <GuideCard guideText={task.guideText} guideFile={task.guideFile} />
-          <ContentCard contentText={task.contentText} contentFile={task.contentFile} words={task.words} />
+          <ContentCard contentText={task.contentText} contentLink={task.contentLink} contentFile={task.contentFile} words={task.words} />
           <AiAudit
             taskId={task.id}
             content={task.contentText}

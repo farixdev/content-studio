@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Send, Loader2, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/user-avatar";
+import { Linkify } from "@/components/linkify";
 import { timeAgo } from "@/lib/utils";
 import { toast } from "sonner";
 import type { TaskDetail } from "@/lib/detail";
@@ -21,6 +22,35 @@ export function Comments({
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Re-sync when a server refresh brings new data (e.g. LiveRefresh).
+  useEffect(() => setComments(initial), [initial]);
+
+  // Poll so teammates' comments appear live without a page refresh.
+  useEffect(() => {
+    let active = true;
+    async function poll() {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const res = await fetch(`/api/tasks/${taskId}/comments`);
+        if (!res.ok || !active) return;
+        const data = await res.json();
+        const next: TaskDetail["comments"] = data.comments ?? [];
+        setComments((prev) =>
+          prev.length === next.length && prev[prev.length - 1]?.id === next[next.length - 1]?.id
+            ? prev
+            : next
+        );
+      } catch {
+        /* ignore */
+      }
+    }
+    const t = setInterval(poll, 10000);
+    return () => {
+      active = false;
+      clearInterval(t);
+    };
+  }, [taskId]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!body.trim()) return;
@@ -35,16 +65,20 @@ export function Comments({
       if (!res.ok) {
         toast.error(data.error ?? "Failed to post comment.");
       } else {
-        setComments((c) => [
-          ...c,
-          {
-            id: data.id,
-            body: data.body,
-            authorName: data.authorName,
-            authorRole: "",
-            createdAt: data.createdAt,
-          },
-        ]);
+        setComments((c) =>
+          c.some((x) => x.id === data.id)
+            ? c
+            : [
+                ...c,
+                {
+                  id: data.id,
+                  body: data.body,
+                  authorName: data.authorName,
+                  authorRole: "",
+                  createdAt: data.createdAt,
+                },
+              ]
+        );
         setBody("");
       }
     } catch {
@@ -78,7 +112,9 @@ export function Comments({
                   <span className="text-sm font-medium text-foreground">{c.authorName}</span>
                   <span className="text-xs text-muted-foreground">{timeAgo(c.createdAt)}</span>
                 </div>
-                <p className="whitespace-pre-wrap text-sm text-foreground/90">{c.body}</p>
+                <p className="whitespace-pre-wrap text-sm text-foreground/90">
+                  <Linkify text={c.body} />
+                </p>
               </div>
             </div>
           ))

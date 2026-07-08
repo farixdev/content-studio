@@ -47,6 +47,7 @@ export function ProjectsView({ initial }: { initial: ProjectListItem[] }) {
         toast.error(data.error ?? "Could not create project.");
       } else {
         toast.success("Project created.");
+        router.refresh(); // keep the projects list fresh when navigating back
         router.push(`/admin/projects/${data.id}`);
       }
     } catch {

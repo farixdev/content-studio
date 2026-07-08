@@ -42,11 +42,13 @@ export default async function WriterTaskPage({ params }: { params: Promise<{ id:
             <WriterEditor
               taskId={task.id}
               initialText={task.contentText}
+              initialLink={task.contentLink}
               initialFile={task.contentFile}
             />
           ) : (
             <ContentCard
               contentText={task.contentText}
+              contentLink={task.contentLink}
               contentFile={task.contentFile}
               words={task.words}
             />

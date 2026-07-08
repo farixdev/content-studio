@@ -18,13 +18,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
-  if (!parsed.success || !isStatus(parsed.data.status)) return badRequest("Invalid status.");
+  if (!parsed.success) return badRequest("Invalid status.");
+  const to = parsed.data.status;
+  // Accept a built-in status or a Manager-defined custom one.
+  if (!isStatus(to) && !(await prisma.customStatus.findUnique({ where: { key: to } }))) {
+    return badRequest("Invalid status.");
+  }
 
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return notFound("Task not found.");
 
   const from = task.status;
-  const to = parsed.data.status;
   if (from === to) return ok({ id, status: to });
 
   // Don't strand a task in a role phase with nobody assigned to act on it.

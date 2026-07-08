@@ -1,5 +1,6 @@
 import { Code2, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Linkify } from "@/components/linkify";
 
 export function DevCard({
   devInstructions,
@@ -23,7 +24,7 @@ export function DevCard({
             Instructions
           </p>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-            {devInstructions}
+            <Linkify text={devInstructions} />
           </p>
         </div>
       )}

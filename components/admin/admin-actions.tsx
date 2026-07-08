@@ -48,12 +48,14 @@ export function AdminActions({
   writers,
   designers,
   developers,
+  customStatuses = [],
   canDelete,
 }: {
   task: TaskDetail;
   writers: People;
   designers: People;
   developers: People;
+  customStatuses?: { key: string; label: string }[];
   canDelete?: boolean;
 }) {
   const router = useRouter();
@@ -89,6 +91,7 @@ export function AdminActions({
   const [contentType, setContentType] = useState(task.contentType);
   const [writerId, setWriterId] = useState(task.writer?.id ?? "UNASSIGNED");
   const [date, setDate] = useState(task.date.slice(0, 10));
+  const [deadline, setDeadline] = useState(task.deadline ? task.deadline.slice(0, 10) : "");
   const [guideText, setGuideText] = useState(task.guideText ?? "");
   const [remarks, setRemarks] = useState(task.remarks ?? "");
 
@@ -218,6 +221,11 @@ export function AdminActions({
               {STATUS_ORDER.map((s) => (
                 <SelectItem key={s} value={s}>
                   {statusMeta(s).label}
+                </SelectItem>
+              ))}
+              {customStatuses.map((s) => (
+                <SelectItem key={s.key} value={s.key}>
+                  {s.label} · custom
                 </SelectItem>
               ))}
             </SelectContent>
@@ -439,9 +447,15 @@ export function AdminActions({
                 </Select>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Date</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Date</Label>
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Deadline</Label>
+                <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Guide</Label>
@@ -475,6 +489,7 @@ export function AdminActions({
                     contentType,
                     writerId: writerId === "UNASSIGNED" ? null : writerId,
                     date: new Date(date).toISOString(),
+                    deadline: deadline ? new Date(deadline).toISOString() : null,
                     guideText: guideText || null,
                     remarks: remarks || null,
                   },

@@ -5,6 +5,34 @@ import { canAccessTask, notifyAdmins, notifyUser } from "@/lib/tasks";
 
 const schema = z.object({ body: z.string().min(1, "Write a comment") });
 
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await apiUser();
+  if (!user) return unauthorized();
+  const { id } = await params;
+
+  const task = await prisma.task.findUnique({
+    where: { id },
+    select: { writerId: true, designerId: true, developerId: true },
+  });
+  if (!task) return notFound("Task not found.");
+  if (!canAccessTask(user.role, user.id, task)) return forbidden();
+
+  const rows = await prisma.comment.findMany({
+    where: { taskId: id },
+    include: { author: { select: { name: true, role: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+  return ok({
+    comments: rows.map((c) => ({
+      id: c.id,
+      body: c.body,
+      authorName: c.author.name,
+      authorRole: c.author.role,
+      createdAt: c.createdAt.toISOString(),
+    })),
+  });
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await apiUser();
   if (!user) return unauthorized();

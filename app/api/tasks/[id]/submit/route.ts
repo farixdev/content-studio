@@ -4,12 +4,37 @@ import { apiUser, badRequest, forbidden, notFound, ok, unauthorized } from "@/li
 import { recordStatus, notifyAdmins, notifyReviewers } from "@/lib/tasks";
 import { canWriterEdit } from "@/lib/workflow";
 import { countWords } from "@/lib/utils";
+import { wordsFromGoogleDoc, wordsFromDocx } from "@/lib/wordcount";
 
 const schema = z.object({
   contentText: z.string().optional().nullable(),
+  contentLink: z.string().optional().nullable(),
   contentFileId: z.string().optional().nullable(),
   draft: z.boolean().optional(),
 });
+
+/** Best word count we can get: typed text wins; else a shared Google Doc link;
+ * else an uploaded .docx. Returns 0 if none are readable. */
+async function resolveWords(
+  contentText: string | null,
+  contentLink: string | null,
+  contentFileId: string | null
+): Promise<number> {
+  const typed = countWords(contentText);
+  if (typed > 0) return typed;
+  if (contentLink) {
+    const w = await wordsFromGoogleDoc(contentLink);
+    if (w) return w;
+  }
+  if (contentFileId) {
+    const up = await prisma.upload.findUnique({ where: { id: contentFileId } });
+    if (up) {
+      const w = await wordsFromDocx(up.data, up.originalName, up.mime);
+      if (w) return w;
+    }
+  }
+  return 0;
+}
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await apiUser("WRITER");
@@ -29,28 +54,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const d = parsed.data;
 
   const contentText = d.contentText ?? task.contentText;
+  const contentLink = d.contentLink !== undefined ? (d.contentLink?.trim() || null) : task.contentLink;
   const contentFileId = d.contentFileId !== undefined ? d.contentFileId : task.contentFileId;
-  const words = countWords(contentText);
+  const words = await resolveWords(contentText, contentLink, contentFileId);
 
   if (d.draft) {
     const to = task.status === "ASSIGNED" ? "IN_PROGRESS" : task.status;
     await prisma.task.update({
       where: { id },
-      data: { contentText, contentFileId, words, status: to },
+      data: { contentText, contentLink, contentFileId, words, status: to },
     });
     if (to !== task.status) await recordStatus(id, task.status, to, user.id, "Started writing");
     return ok({ id, status: to, words });
   }
 
   // Submitting for review.
-  if (!contentText?.trim() && !contentFileId) {
-    return badRequest("Add your content (or attach a file) before submitting.");
+  if (!contentText?.trim() && !contentFileId && !contentLink) {
+    return badRequest("Add your content, paste a Google Doc link, or attach a file before submitting.");
   }
 
   const to = task.status === "IMPROVEMENT" ? "ISSUE_RESOLVED" : "WRITTEN";
   await prisma.task.update({
     where: { id },
-    data: { contentText, contentFileId, words, status: to },
+    data: { contentText, contentLink, contentFileId, words, status: to },
   });
   await prisma.reviewIssue.updateMany({ where: { taskId: id, resolved: false }, data: { resolved: true } });
   await recordStatus(id, task.status, to, user.id, "Submitted for review");

@@ -82,11 +82,15 @@ export interface TaskListItem {
   contentType: string;
   status: string;
   date: string;
+  deadline: string | null;
   words: number;
   websiteLink: string | null;
   remarks: string | null;
   writerName: string | null;
   designerName: string | null;
+  developerName: string | null;
+  figmaLink: string | null;
+  devLink: string | null;
   projectId: string | null;
   projectName: string | null;
   guidePreview: string | null;
@@ -101,15 +105,19 @@ type TaskWithPeople = {
   contentType: string;
   status: string;
   date: Date;
+  deadline?: Date | null;
   words: number;
   websiteLink: string | null;
   remarks: string | null;
   guideText: string | null;
   contentText: string | null;
+  figmaLink?: string | null;
+  devLink?: string | null;
   updatedAt: Date;
   projectId: string | null;
   writer: { name: string } | null;
   designer: { name: string } | null;
+  developer?: { name: string } | null;
   project?: { name: string } | null;
 };
 
@@ -133,11 +141,15 @@ export function toListItem(t: TaskWithPeople): TaskListItem {
     contentType: t.contentType,
     status: t.status,
     date: t.date.toISOString(),
+    deadline: t.deadline ? t.deadline.toISOString() : null,
     words: t.words,
     websiteLink: t.websiteLink,
     remarks: t.remarks,
     writerName: t.writer?.name ?? null,
     designerName: t.designer?.name ?? null,
+    developerName: t.developer?.name ?? null,
+    figmaLink: t.figmaLink ?? null,
+    devLink: t.devLink ?? null,
     projectId: t.projectId,
     projectName: t.project?.name ?? null,
     guidePreview: t.guideText ? t.guideText.slice(0, 140) : null,

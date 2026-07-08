@@ -1,18 +1,21 @@
-import { FileText, Hash } from "lucide-react";
+import { FileText, Hash, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FileLink } from "./file-link";
+import { Linkify } from "@/components/linkify";
 import type { FileRef } from "@/lib/detail";
 
 export function ContentCard({
   contentText,
+  contentLink,
   contentFile,
   words,
 }: {
   contentText: string | null;
+  contentLink?: string | null;
   contentFile: FileRef | null;
   words: number;
 }) {
-  const hasContent = !!contentText || !!contentFile;
+  const hasContent = !!contentText || !!contentFile || !!contentLink;
   return (
     <Card className="p-5">
       <div className="mb-3 flex items-center justify-between">
@@ -29,10 +32,20 @@ export function ContentCard({
       </div>
       {contentText ? (
         <div className="max-h-[420px] overflow-y-auto whitespace-pre-wrap rounded-xl bg-muted/40 p-4 text-sm leading-relaxed text-foreground/90 thin-scrollbar">
-          {contentText}
+          <Linkify text={contentText} />
         </div>
-      ) : (
+      ) : !contentLink && !contentFile ? (
         <p className="text-sm text-muted-foreground">Nothing submitted yet.</p>
+      ) : null}
+      {contentLink && (
+        <a
+          href={contentLink}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-flex items-center gap-1.5 break-all text-sm font-medium text-primary hover:underline"
+        >
+          <ExternalLink className="h-4 w-4 shrink-0" /> Open submitted document
+        </a>
       )}
       {contentFile && (
         <div className="mt-3">

@@ -42,6 +42,7 @@ export function CreateTaskForm({
   const [contentType, setContentType] = useState("");
   const [writerId, setWriterId] = useState("UNASSIGNED");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [deadline, setDeadline] = useState("");
   const [guideText, setGuideText] = useState("");
   const [guideFile, setGuideFile] = useState<UploadedFile | null>(null);
   const [remarks, setRemarks] = useState("");
@@ -112,6 +113,7 @@ export function CreateTaskForm({
           guideFileId: guideFile?.id ?? null,
           remarks: remarks || null,
           date: new Date(date).toISOString(),
+          deadline: deadline ? new Date(deadline).toISOString() : null,
         }),
       });
       const data = await res.json();
@@ -158,7 +160,7 @@ export function CreateTaskForm({
             </Select>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
               <Label>Content type</Label>
               <Select value={contentType} onValueChange={setContentType}>
@@ -193,6 +195,15 @@ export function CreateTaskForm({
             <div className="space-y-1.5">
               <Label htmlFor="date">Date</Label>
               <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="deadline">Deadline</Label>
+              <Input
+                id="deadline"
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
             </div>
           </div>
         </div>

@@ -42,57 +42,44 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
   useEffect(() => {
     let active = true;
 
-    async function full() {
+    // Reconcile the full recent list every tick so both new messages AND ones
+    // deleted by someone else show up live — without a page refresh. Cheap for a
+    // small team (list is capped server-side).
+    async function sync(initial: boolean) {
+      if (!initial && document.visibilityState !== "visible") return;
       try {
         const res = await fetch("/api/chat");
         if (!res.ok || !active) return;
         const data = await res.json();
-        const msgs: Msg[] = data.messages ?? [];
-        setMessages(msgs);
+        const incoming: Msg[] = data.messages ?? [];
         setRoster(data.roster ?? []);
-        lastAt.current = msgs.length ? msgs[msgs.length - 1].createdAt : new Date(0).toISOString();
+        setMessages((prev) => {
+          // Skip the state update when nothing changed (avoids scroll churn).
+          const unchanged =
+            prev.length === incoming.length &&
+            prev[0]?.id === incoming[0]?.id &&
+            prev[prev.length - 1]?.id === incoming[incoming.length - 1]?.id;
+          if (unchanged) return prev;
+          if (!openRef.current) {
+            const prevIds = new Set(prev.map((m) => m.id));
+            const added = incoming.filter((m) => !prevIds.has(m.id) && m.authorId !== me.id).length;
+            if (added) setUnread((u) => u + added);
+          }
+          return incoming;
+        });
+        lastAt.current = incoming.length
+          ? incoming[incoming.length - 1].createdAt
+          : new Date(0).toISOString();
         setLoaded(true);
       } catch {
         /* ignore */
       }
     }
 
-    async function poll() {
-      if (document.visibilityState !== "visible") return;
-      try {
-        const after = lastAt.current;
-        const res = await fetch("/api/chat" + (after ? `?after=${encodeURIComponent(after)}` : ""));
-        if (!res.ok || !active) return;
-        const data = await res.json();
-        setRoster(data.roster ?? []);
-        const incoming: Msg[] = data.messages ?? [];
-        if (!incoming.length) return;
-        setMessages((prev) => {
-          const ids = new Set(prev.map((m) => m.id));
-          const fresh = incoming.filter((m) => !ids.has(m.id));
-          if (!fresh.length) return prev;
-          lastAt.current = fresh[fresh.length - 1].createdAt;
-          if (!openRef.current) {
-            const notMine = fresh.filter((m) => m.authorId !== me.id).length;
-            if (notMine) setUnread((u) => u + notMine);
-          }
-          return [...prev, ...fresh];
-        });
-      } catch {
-        /* ignore */
-      }
-    }
-
-    full();
-    let ticks = 0;
-    const id = setInterval(() => {
-      ticks += 1;
-      // Every ~minute do a full reconcile so messages deleted by others disappear too.
-      if (ticks % 6 === 0) full();
-      else poll();
-    }, 10000);
+    sync(true);
+    const id = setInterval(() => sync(false), 10000);
     const onVis = () => {
-      if (document.visibilityState === "visible") poll();
+      if (document.visibilityState === "visible") sync(false);
     };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("focus", onVis);

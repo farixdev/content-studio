@@ -7,6 +7,7 @@ import {
   Palette,
   FolderKanban,
   Code2,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { ROLE_HOME, type Role } from "@/lib/constants";
@@ -24,7 +25,10 @@ export function navForRole(role: Role): NavItem[] {
         { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { label: "Projects", href: "/admin/projects", icon: FolderKanban },
         { label: "Content", href: "/admin/tasks", icon: FileText },
+        { label: "Design", href: "/admin/design", icon: Palette },
+        { label: "Development", href: "/admin/development", icon: Code2 },
         { label: "Team", href: "/admin/team", icon: Users },
+        { label: "Settings", href: "/admin/settings", icon: Settings },
       ];
     case "WRITER":
       return [
@@ -36,6 +40,7 @@ export function navForRole(role: Role): NavItem[] {
         { label: "Review Queue", href: "/reviewer", icon: ClipboardCheck },
         { label: "Projects", href: "/admin/projects", icon: FolderKanban },
         { label: "Content", href: "/admin/tasks", icon: FileText },
+        { label: "Design", href: "/admin/design", icon: Palette },
       ];
     case "DESIGNER":
       return [{ label: "Design Board", href: "/designer", icon: Palette }];

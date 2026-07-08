@@ -12,8 +12,10 @@ export interface TaskDetail {
   contentType: string;
   status: string;
   date: string;
+  deadline: string | null;
   words: number;
   guideText: string | null;
+  contentLink: string | null;
   guideFile: FileRef | null;
   contentText: string | null;
   contentFile: FileRef | null;
@@ -85,8 +87,10 @@ export async function getTaskDetail(id: string): Promise<TaskDetail | null> {
     contentType: t.contentType,
     status: t.status,
     date: t.date.toISOString(),
+    deadline: t.deadline ? t.deadline.toISOString() : null,
     words: t.words,
     guideText: t.guideText,
+    contentLink: t.contentLink,
     guideFile: fileRef(t.guideFile),
     contentText: t.contentText,
     contentFile: fileRef(t.contentFile),

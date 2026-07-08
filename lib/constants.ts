@@ -62,8 +62,8 @@ export const STATUS_META: Record<Status, StatusMeta> = {
   WRITTEN: { label: "Written", phase: "Review", badge: "bg-blue-100 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
   IMPROVEMENT: { label: "Needs Improvement", phase: "Review", badge: "bg-amber-100 text-amber-800 ring-amber-200", dot: "bg-amber-500" },
   ISSUE_RESOLVED: { label: "Issue Resolved", phase: "Review", badge: "bg-lime-100 text-lime-800 ring-lime-200", dot: "bg-lime-500" },
-  REVIEWED_BY_UMAR: { label: "Reviewed by Umar", phase: "Review", badge: "bg-violet-100 text-violet-700 ring-violet-200", dot: "bg-violet-500" },
-  REVIEWED_BY_WAQAR: { label: "Reviewed by Waqar", phase: "Review", badge: "bg-indigo-100 text-indigo-700 ring-indigo-200", dot: "bg-indigo-500" },
+  REVIEWED_BY_UMAR: { label: "1st Approval", phase: "Review", badge: "bg-violet-100 text-violet-700 ring-violet-200", dot: "bg-violet-500" },
+  REVIEWED_BY_WAQAR: { label: "Approved", phase: "Review", badge: "bg-indigo-100 text-indigo-700 ring-indigo-200", dot: "bg-indigo-500" },
   DESIGN_NOW: { label: "Design Now", phase: "Design", badge: "bg-purple-100 text-purple-700 ring-purple-200", dot: "bg-purple-500" },
   DESIGNING: { label: "Designing", phase: "Design", badge: "bg-fuchsia-100 text-fuchsia-700 ring-fuchsia-200", dot: "bg-fuchsia-500" },
   DESIGNED: { label: "Designed", phase: "Design", badge: "bg-teal-100 text-teal-700 ring-teal-200", dot: "bg-teal-500" },
@@ -109,8 +109,44 @@ export const PHASE_ACCENT: Record<Phase, string> = {
   Closed: "text-rose-600",
 };
 
+// Colour presets for Manager-defined custom statuses.
+export const CUSTOM_STATUS_COLORS: Record<string, { badge: string; dot: string }> = {
+  slate: { badge: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-400" },
+  blue: { badge: "bg-blue-100 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
+  violet: { badge: "bg-violet-100 text-violet-700 ring-violet-200", dot: "bg-violet-500" },
+  amber: { badge: "bg-amber-100 text-amber-800 ring-amber-200", dot: "bg-amber-500" },
+  emerald: { badge: "bg-emerald-100 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
+  rose: { badge: "bg-rose-100 text-rose-700 ring-rose-200", dot: "bg-rose-500" },
+  cyan: { badge: "bg-cyan-100 text-cyan-700 ring-cyan-200", dot: "bg-cyan-500" },
+  fuchsia: { badge: "bg-fuchsia-100 text-fuchsia-700 ring-fuchsia-200", dot: "bg-fuchsia-500" },
+};
+export const CUSTOM_STATUS_COLOR_NAMES = Object.keys(CUSTOM_STATUS_COLORS);
+
+// Runtime registry of custom statuses so statusMeta() can render their label +
+// colour anywhere a badge is shown. Populated on the server per-request (from the
+// DB) and hydrated on the client via <CustomStatusProvider>.
+export interface CustomStatusDef {
+  key: string;
+  label: string;
+  color: string;
+}
+let CUSTOM_REGISTRY: Record<string, CustomStatusDef> = {};
+export function setCustomStatuses(list: CustomStatusDef[]) {
+  CUSTOM_REGISTRY = Object.fromEntries(list.map((c) => [c.key, c]));
+}
+export function customStatusList(): CustomStatusDef[] {
+  return Object.values(CUSTOM_REGISTRY);
+}
+
 export function statusMeta(status: string): StatusMeta {
-  return STATUS_META[status as Status] ?? { label: status, phase: "Writing", badge: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-400" };
+  const built = STATUS_META[status as Status];
+  if (built) return built;
+  const custom = CUSTOM_REGISTRY[status];
+  if (custom) {
+    const c = CUSTOM_STATUS_COLORS[custom.color] ?? CUSTOM_STATUS_COLORS.slate;
+    return { label: custom.label, phase: "Writing", badge: c.badge, dot: c.dot };
+  }
+  return { label: status, phase: "Writing", badge: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-400" };
 }
 
 export function isStatus(value: string): value is Status {

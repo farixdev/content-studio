@@ -1,6 +1,7 @@
 import { BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FileLink } from "./file-link";
+import { Linkify } from "@/components/linkify";
 import type { FileRef } from "@/lib/detail";
 
 export function GuideCard({
@@ -17,7 +18,7 @@ export function GuideCard({
         Content Guide
       </div>
       {guideText ? (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{guideText}</p>
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90"><Linkify text={guideText} /></p>
       ) : (
         <p className="text-sm text-muted-foreground">No written guide was provided.</p>
       )}

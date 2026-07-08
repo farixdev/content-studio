@@ -1,6 +1,7 @@
 import { Palette, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FileLink } from "./file-link";
+import { Linkify } from "@/components/linkify";
 import type { FileRef } from "@/lib/detail";
 
 export function DesignCard({
@@ -25,7 +26,7 @@ export function DesignCard({
             Instructions
           </p>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-            {designInstructions}
+            <Linkify text={designInstructions} />
           </p>
         </div>
       )}
