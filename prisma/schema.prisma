@@ -14,10 +14,13 @@ datasource db {
 
 model User {
   id           String   @id @default(cuid())
-  name         String
-  username     String   @unique
-  passwordHash String
-  role         String // ADMIN | WRITER | REVIEWER | DESIGNER
+  name          String
+  username      String  @unique
+  passwordHash  String
+  // Plaintext of the current login, kept so the manager can view/re-share a
+  // team member's credentials. Internal-tool convenience (manager-only view).
+  plainPassword String?
+  role          String // ADMIN | WRITER | REVIEWER | DESIGNER
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -35,6 +38,7 @@ model User {
 
   projectsCreated    Project[]       @relation("ProjectCreatedBy")
   projectMemberships ProjectMember[]
+  chatMessages       ChatMessage[]
 }
 
 model Task {
@@ -212,4 +216,14 @@ model ProjectMember {
   @@unique([projectId, userId])
   @@index([projectId])
   @@index([userId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

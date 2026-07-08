@@ -19,6 +19,7 @@ async function upsertUser(opts: {
       username: opts.username,
       role: opts.role,
       passwordHash: await hash(opts.password),
+      plainPassword: opts.password,
     },
   });
 }
