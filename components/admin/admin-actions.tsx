@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -76,6 +76,13 @@ export function AdminActions({
   const [devInstructions, setDevInstructions] = useState(task.devInstructions ?? "");
   const [rejectReason, setRejectReason] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Keep the status/link controls in sync when a refresh brings a new task state,
+  // so the Apply button can't offer to revert a workflow action.
+  useEffect(() => {
+    setStatus(task.status);
+    setLink(task.websiteLink ?? "");
+  }, [task.status, task.websiteLink]);
 
   const [editOpen, setEditOpen] = useState(false);
   const [title, setTitle] = useState(task.title);
@@ -196,7 +203,8 @@ export function AdminActions({
         </Card>
       )}
 
-      {/* Status override */}
+      {/* Status override — Manager only */}
+      {canDelete && (
       <Card className="p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Set status
@@ -225,6 +233,7 @@ export function AdminActions({
           </Button>
         </div>
       </Card>
+      )}
 
       {/* Website link */}
       <Card className="p-4">
@@ -260,15 +269,17 @@ export function AdminActions({
             <Pencil className="h-4 w-4" />
             Edit
           </Button>
-          <Button
-            variant="ghost"
-            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-            disabled={busy !== null || task.status === "CANCELLED"}
-            onClick={() => call("cancel", `/api/tasks/${task.id}/status`, { status: "CANCELLED" }, "Task cancelled")}
-          >
-            <XCircle className="h-4 w-4" />
-            Cancel
-          </Button>
+          {canDelete && (
+            <Button
+              variant="ghost"
+              className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+              disabled={busy !== null || task.status === "CANCELLED"}
+              onClick={() => call("cancel", `/api/tasks/${task.id}/status`, { status: "CANCELLED" }, "Task cancelled")}
+            >
+              <XCircle className="h-4 w-4" />
+              Cancel
+            </Button>
+          )}
         </div>
         {canDelete && (
           <Button

@@ -84,7 +84,13 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
     }
 
     full();
-    const id = setInterval(poll, 10000);
+    let ticks = 0;
+    const id = setInterval(() => {
+      ticks += 1;
+      // Every ~minute do a full reconcile so messages deleted by others disappear too.
+      if (ticks % 6 === 0) full();
+      else poll();
+    }, 10000);
     const onVis = () => {
       if (document.visibilityState === "visible") poll();
     };
@@ -138,17 +144,25 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
   }
 
   async function del(id: string) {
-    const prev = messages;
+    const removed = messages.find((m) => m.id === id);
     setMessages((list) => list.filter((m) => m.id !== id));
+    const restore = () => {
+      if (removed) {
+        // Re-insert only the removed message so we don't clobber messages that
+        // arrived while the request was in flight.
+        setMessages((list) =>
+          list.some((m) => m.id === id)
+            ? list
+            : [...list, removed].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        );
+      }
+      toast.error("Could not delete.");
+    };
     try {
       const res = await fetch(`/api/chat/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        setMessages(prev);
-        toast.error("Could not delete.");
-      }
+      if (!res.ok) restore();
     } catch {
-      setMessages(prev);
-      toast.error("Could not delete.");
+      restore();
     }
   }
 

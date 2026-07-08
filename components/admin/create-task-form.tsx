@@ -77,7 +77,13 @@ export function CreateTaskForm({
         toast.error(data.error ?? "Could not generate the guide.");
         return;
       }
+      if (guideText.trim() && !window.confirm("Replace the guide you've already written with the AI version?")) {
+        return;
+      }
       setGuideText(data.guide);
+      setGenKeyword("");
+      setGenAudience("");
+      setGenNotes("");
       setGenOpen(false);
       toast.success("Guide generated — review and tweak as needed.");
     } catch {

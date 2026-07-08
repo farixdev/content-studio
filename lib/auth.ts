@@ -7,8 +7,13 @@ export const SESSION_COOKIE = "mcs_session";
 const ALG = "HS256";
 
 function getSecret(): Uint8Array {
-  const secret = process.env.JWT_SECRET || "mindcob-dev-secret";
-  return new TextEncoder().encode(secret);
+  const secret = process.env.JWT_SECRET;
+  if (secret && secret.length >= 32) return new TextEncoder().encode(secret);
+  // Never sign/verify with a weak, publicly-known secret in production — fail closed.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET is missing or too short — set a long random string.");
+  }
+  return new TextEncoder().encode("mindcob-local-dev-only-insecure-secret-000000");
 }
 
 export interface SessionPayload {

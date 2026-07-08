@@ -10,7 +10,9 @@ const schema = z.object({
 });
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const user = await apiUser(["ADMIN", "REVIEWER"]);
+  // Free-form status override is a Manager-only power (reviewers act through the
+  // dedicated review / assign / design-review routes).
+  const user = await apiUser("ADMIN");
   if (!user) return unauthorized();
   const { id } = await params;
 
@@ -24,6 +26,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const from = task.status;
   const to = parsed.data.status;
   if (from === to) return ok({ id, status: to });
+
+  // Don't strand a task in a role phase with nobody assigned to act on it.
+  if (to === "DEV_NOW" && !task.developerId) {
+    return badRequest("Assign a developer before moving this to Develop.");
+  }
+  if (to === "DESIGN_NOW" && !task.designerId) {
+    return badRequest("Assign a designer before moving this to Design.");
+  }
 
   await prisma.task.update({ where: { id }, data: { status: to } });
   await recordStatus(id, from, to, user.id, parsed.data.note);

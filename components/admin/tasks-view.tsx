@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, LayoutGrid, Table2, ExternalLink, ArrowUpRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,9 @@ export function TasksView({
   const [type, setType] = useState("ALL");
   const [writer, setWriter] = useState("ALL");
   const [project, setProject] = useState("ALL");
+
+  // Re-sync when the server sends fresh data (live-refresh / other users' edits).
+  useEffect(() => setTasks(initial), [initial]);
 
   const types = useMemo(
     () => Array.from(new Set(initial.map((t) => t.contentType))).sort(),

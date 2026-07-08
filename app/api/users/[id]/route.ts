@@ -53,16 +53,22 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!target) return notFound("User not found.");
   if (target.role === "ADMIN") return badRequest("The admin account can't be deleted.");
 
-  // Remove the member's activity records (these would otherwise block the delete
-  // on Postgres), then delete the user. Their assigned content is kept but
-  // becomes unassigned (writerId/designerId auto-null); notifications and project
-  // memberships cascade away.
+  // Hand off records the workflow still needs to the acting manager, then remove
+  // the member's personal activity, then delete them. Assigned content
+  // (writer/designer/developer) auto-nulls; notifications, project memberships and
+  // chat messages cascade away.
   await prisma.$transaction([
+    // Required FKs (onDelete: Restrict) — reassign so the user can be deleted.
+    prisma.task.updateMany({ where: { createdById: id }, data: { createdById: admin.id } }),
+    prisma.project.updateMany({ where: { createdById: id }, data: { createdById: admin.id } }),
+    // Keep their uploaded files (still attached to live/published tasks) — reassign
+    // ownership instead of destroying the file bytes.
+    prisma.upload.updateMany({ where: { uploadedById: id }, data: { uploadedById: admin.id } }),
+    // Personal activity goes with them.
     prisma.comment.deleteMany({ where: { authorId: id } }),
     prisma.reviewApproval.deleteMany({ where: { reviewerId: id } }),
     prisma.reviewIssue.deleteMany({ where: { raisedById: id } }),
     prisma.statusHistory.deleteMany({ where: { byId: id } }),
-    prisma.upload.deleteMany({ where: { uploadedById: id } }),
     prisma.user.delete({ where: { id } }),
   ]);
 

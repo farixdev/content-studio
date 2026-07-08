@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { apiUser, badRequest, ok, unauthorized } from "@/lib/api";
 import { nextRefCode, notifyUser, notifyAdmins } from "@/lib/tasks";
@@ -29,24 +30,33 @@ export async function POST(req: Request) {
   if (!project) return badRequest("That project no longer exists.");
   if (project.status === "ARCHIVED") return badRequest("That project is archived — reactivate it first.");
 
-  const refCode = await nextRefCode();
-
-  const task = await prisma.task.create({
-    data: {
-      refCode,
-      title: d.title.trim(),
-      projectId: d.projectId,
-      contentType: d.contentType,
-      status: "ASSIGNED",
-      writerId: d.writerId || null,
-      guideText: d.guideText?.trim() || null,
-      guideFileId: d.guideFileId || null,
-      remarks: d.remarks?.trim() || null,
-      date: d.date ? new Date(d.date) : new Date(),
-      createdById: user.id,
-      statusHistory: { create: { toStatus: "ASSIGNED", byId: user.id, note: "Created" } },
-    },
-  });
+  // Retry on the rare refCode unique-collision from two concurrent creates.
+  let created: { id: string; title: string; refCode: string } | null = null;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      created = await prisma.task.create({
+        data: {
+          refCode: await nextRefCode(),
+          title: d.title.trim(),
+          projectId: d.projectId,
+          contentType: d.contentType,
+          status: "ASSIGNED",
+          writerId: d.writerId || null,
+          guideText: d.guideText?.trim() || null,
+          guideFileId: d.guideFileId || null,
+          remarks: d.remarks?.trim() || null,
+          date: d.date ? new Date(d.date) : new Date(),
+          createdById: user.id,
+          statusHistory: { create: { toStatus: "ASSIGNED", byId: user.id, note: "Created" } },
+        },
+      });
+      break;
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002" && attempt < 4) continue;
+      throw e;
+    }
+  }
+  const task = created!;
 
   if (d.writerId) {
     // Assigning a writer to content in a project makes them a project member.
@@ -63,5 +73,5 @@ export async function POST(req: Request) {
     await notifyAdmins("CREATED", `${user.name} created: ${task.title}`, task.id);
   }
 
-  return ok({ id: task.id, refCode });
+  return ok({ id: task.id, refCode: task.refCode });
 }
