@@ -1,11 +1,11 @@
 import { requireRole } from "@/lib/session";
 import { PageHeader } from "@/components/layout/page-header";
 import { SettingsView } from "@/components/admin/settings-view";
-import { getStatusesForSettings, getContentTypes, seedContentTypesIfEmpty } from "@/lib/settings";
+import { getStatusesForSettings, getContentTypes } from "@/lib/settings";
 
 export default async function AdminSettingsPage() {
   await requireRole("ADMIN");
-  await seedContentTypesIfEmpty();
+  // getContentTypes seeds the defaults once (marker-tracked) on first use.
   const [statuses, contentTypes] = await Promise.all([getStatusesForSettings(), getContentTypes()]);
 
   return (

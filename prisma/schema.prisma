@@ -264,3 +264,10 @@ model ContentType {
   order     Int      @default(0)
   createdAt DateTime @default(now())
 }
+
+// Small key/value store for one-time flags (e.g. "content types were seeded"),
+// so an intentionally-emptied list isn't silently re-seeded.
+model AppMeta {
+  key   String @id
+  value String
+}
