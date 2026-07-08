@@ -1,5 +1,5 @@
 import { statusMeta } from "@/lib/constants";
-import { cn, timeAgo } from "@/lib/utils";
+import { cn, timeAgo, formatDate } from "@/lib/utils";
 import type { TaskDetail } from "@/lib/detail";
 
 export function StatusTimeline({ history }: { history: TaskDetail["history"] }) {
@@ -21,7 +21,10 @@ export function StatusTimeline({ history }: { history: TaskDetail["history"] }) 
               <p className="text-sm font-medium text-foreground">{meta.label}</p>
               <p className="text-xs text-muted-foreground">
                 {h.byName}
-                {h.note ? ` · ${h.note}` : ""} · {timeAgo(h.createdAt)}
+                {h.note ? ` · ${h.note}` : ""}
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+                {formatDate(h.createdAt, "MMM d, yyyy · h:mm a")} · {timeAgo(h.createdAt)}
               </p>
             </div>
           </li>

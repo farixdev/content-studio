@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { apiUser, badRequest, notFound, ok, unauthorized } from "@/lib/api";
 import { recordStatus, notifyAdmins, notifyUser } from "@/lib/tasks";
 import { isReviewPhase, statusAfterApproval } from "@/lib/workflow";
+import type { Status } from "@/lib/constants";
 
 const schema = z.object({
   action: z.enum(["approve", "issue"]),
@@ -52,8 +53,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e;
   }
 
+  // The Manager approves outright (single sign-off is final); reviewers need two
+  // distinct sign-offs before content is Approved and ready for design.
   const count = await prisma.reviewApproval.count({ where: { taskId: id } });
-  const to = statusAfterApproval(count);
+  const to: Status = user.role === "ADMIN" ? "REVIEWED_BY_WAQAR" : statusAfterApproval(count);
   // Advance monotonically via a guarded update so concurrent approvals can't
   // regress the status (lost-update race).
   const below =
@@ -65,7 +68,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     data: { status: to },
   });
   if (moved.count > 0) {
-    await recordStatus(id, task.status, to, user.id, `Approved by ${user.name}`);
+    const note = user.role === "ADMIN" ? "Approved by Manager" : `Approved by ${user.name}`;
+    await recordStatus(id, task.status, to, user.id, note);
   }
   await notifyAdmins("REVIEWED", `${user.name} approved: ${task.title}`, id);
   return ok({ id, status: to, approvals: count });

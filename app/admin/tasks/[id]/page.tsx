@@ -20,7 +20,7 @@ export default async function AdminTaskDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [task, writers, designers, developers, me] = await Promise.all([
+  const [task, writers, designers, developers, customRows, me] = await Promise.all([
     getTaskDetail(id),
     prisma.user.findMany({
       where: { role: "WRITER", active: true },
@@ -37,9 +37,11 @@ export default async function AdminTaskDetailPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    prisma.customStatus.findMany({ orderBy: [{ order: "asc" }, { createdAt: "asc" }] }),
     getCurrentUser(),
   ]);
   if (!task) notFound();
+  const customStatuses = customRows.map((c) => ({ key: c.key, label: c.label }));
 
   return (
     <div>
@@ -47,7 +49,7 @@ export default async function AdminTaskDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <GuideCard guideText={task.guideText} guideFile={task.guideFile} />
-          <ContentCard contentText={task.contentText} contentFile={task.contentFile} words={task.words} />
+          <ContentCard contentText={task.contentText} contentLink={task.contentLink} contentFile={task.contentFile} words={task.words} />
           <AiAudit
             taskId={task.id}
             content={task.contentText}
@@ -78,6 +80,7 @@ export default async function AdminTaskDetailPage({
             writers={writers}
             designers={designers}
             developers={developers}
+            customStatuses={customStatuses}
             canDelete={me?.role === "ADMIN"}
           />
           <Card className="p-5">

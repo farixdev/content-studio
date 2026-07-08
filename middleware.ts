@@ -23,6 +23,7 @@ function isAllowed(role: Role, pathname: string): boolean {
     return (
       pathname.startsWith("/admin/projects") ||
       pathname.startsWith("/admin/tasks") ||
+      pathname.startsWith("/admin/design") ||
       /^\/admin\/team\/.+/.test(pathname)
     );
   }

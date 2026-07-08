@@ -14,6 +14,7 @@ const schema = z.object({
   designInstructions: z.string().nullable().optional(),
   projectId: z.string().min(1).optional(),
   date: z.string().optional(),
+  deadline: z.string().nullable().optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -51,6 +52,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         : {}),
       ...(d.projectId !== undefined ? { projectId: d.projectId } : {}),
       ...(d.date !== undefined ? { date: new Date(d.date) } : {}),
+      ...(d.deadline !== undefined ? { deadline: d.deadline ? new Date(d.deadline) : null } : {}),
     },
   });
 

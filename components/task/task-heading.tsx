@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarDays } from "lucide-react";
+import { ArrowLeft, CalendarDays, CalendarClock, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { formatDate } from "@/lib/utils";
@@ -37,6 +37,23 @@ export function TaskHeading({
               <CalendarDays className="h-4 w-4" />
               {formatDate(task.date)}
             </span>
+            {task.deadline && (
+              <span
+                className={
+                  "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-medium " +
+                  (new Date(task.deadline).getTime() < Date.now()
+                    ? "bg-rose-50 text-rose-700"
+                    : "bg-amber-50 text-amber-700")
+                }
+              >
+                {new Date(task.deadline).getTime() < Date.now() ? (
+                  <AlertTriangle className="h-4 w-4" />
+                ) : (
+                  <CalendarClock className="h-4 w-4" />
+                )}
+                Due {formatDate(task.deadline)}
+              </span>
+            )}
             {task.writer && (
               <span className="inline-flex items-center gap-1.5">
                 <UserAvatar name={task.writer.name} className="h-5 w-5" />

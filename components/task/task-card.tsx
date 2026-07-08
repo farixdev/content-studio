@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Hash, FolderKanban } from "lucide-react";
+import { Hash, FolderKanban, CalendarClock, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, formatDate } from "@/lib/utils";
 import type { TaskListItem } from "@/lib/tasks";
 
 export function TaskCard({ task, href }: { task: TaskListItem; href: string }) {
@@ -32,6 +32,23 @@ export function TaskCard({ task, href }: { task: TaskListItem; href: string }) {
           <span className="inline-flex items-center gap-0.5">
             <Hash className="h-3 w-3" />
             {task.words}
+          </span>
+        )}
+        {task.deadline && (
+          <span
+            className={
+              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium " +
+              (new Date(task.deadline).getTime() < Date.now()
+                ? "bg-rose-50 text-rose-700"
+                : "bg-amber-50 text-amber-700")
+            }
+          >
+            {new Date(task.deadline).getTime() < Date.now() ? (
+              <AlertTriangle className="h-3 w-3" />
+            ) : (
+              <CalendarClock className="h-3 w-3" />
+            )}
+            Due {formatDate(task.deadline, "MMM d")}
           </span>
         )}
         <span className="ml-auto">{timeAgo(task.updatedAt)}</span>

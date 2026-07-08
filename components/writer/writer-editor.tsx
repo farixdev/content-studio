@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Save, Loader2, Hash } from "lucide-react";
+import { Send, Save, Loader2, Hash, Link2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { UploadField, type UploadedFile } from "@/components/upload-field";
 import { countWords } from "@/lib/utils";
@@ -13,17 +15,21 @@ import { toast } from "sonner";
 export function WriterEditor({
   taskId,
   initialText,
+  initialLink,
   initialFile,
 }: {
   taskId: string;
   initialText: string | null;
+  initialLink: string | null;
   initialFile: UploadedFile | null;
 }) {
   const router = useRouter();
   const [text, setText] = useState(initialText ?? "");
+  const [link, setLink] = useState(initialLink ?? "");
   const [file, setFile] = useState<UploadedFile | null>(initialFile);
   const [busy, setBusy] = useState<string | null>(null);
   const words = countWords(text);
+  const isGDoc = /docs\.google\.com\/document\//.test(link);
 
   async function send(draft: boolean) {
     setBusy(draft ? "draft" : "submit");
@@ -31,7 +37,12 @@ export function WriterEditor({
       const res = await fetch(`/api/tasks/${taskId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentText: text, contentFileId: file?.id ?? null, draft }),
+        body: JSON.stringify({
+          contentText: text,
+          contentLink: link || null,
+          contentFileId: file?.id ?? null,
+          draft,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -62,13 +73,29 @@ export function WriterEditor({
         placeholder="Write or paste your content here…"
         className="min-h-[340px] leading-relaxed"
       />
+      <div className="mt-4 space-y-1.5">
+        <Label htmlFor="content-link" className="flex items-center gap-1.5">
+          <Link2 className="h-3.5 w-3.5" /> Or share a Google Doc / content link
+        </Label>
+        <Input
+          id="content-link"
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="https://docs.google.com/document/d/…"
+        />
+        <p className="text-xs text-muted-foreground">
+          {isGDoc
+            ? "We'll read this Google Doc and count its words on submit (make sure it's shared as “anyone with the link”)."
+            : "If you don't type your content here, paste a link to it instead."}
+        </p>
+      </div>
       <div className="mt-3">
         <UploadField value={file} onChange={setFile} label="Attach content document (.docx, .pdf)" />
       </div>
       <div className="mt-4 flex items-center gap-2">
         <Button
           onClick={() => send(false)}
-          disabled={busy !== null || (!text.trim() && !file)}
+          disabled={busy !== null || (!text.trim() && !link.trim() && !file)}
         >
           {busy === "submit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           Submit for review

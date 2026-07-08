@@ -13,6 +13,7 @@ const schema = z.object({
   guideFileId: z.string().nullable().optional(),
   remarks: z.string().nullable().optional(),
   date: z.string().optional(),
+  deadline: z.string().nullable().optional(),
 });
 
 export async function POST(req: Request) {
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
           guideFileId: d.guideFileId || null,
           remarks: d.remarks?.trim() || null,
           date: d.date ? new Date(d.date) : new Date(),
+          deadline: d.deadline ? new Date(d.deadline) : null,
           createdById: user.id,
           statusHistory: { create: { toStatus: "ASSIGNED", byId: user.id, note: "Created" } },
         },
