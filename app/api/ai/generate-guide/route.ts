@@ -11,7 +11,7 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  const user = await apiUser("ADMIN");
+  const user = await apiUser(["ADMIN", "REVIEWER"]);
   if (!user) return unauthorized();
   if (!llmConfigured()) {
     return badRequest(

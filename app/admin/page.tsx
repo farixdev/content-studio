@@ -14,6 +14,7 @@ const PHASE_BAR: Record<Phase, string> = {
   Writing: "bg-sky-400",
   Review: "bg-violet-400",
   Design: "bg-fuchsia-400",
+  Development: "bg-blue-400",
   Publish: "bg-emerald-400",
   Closed: "bg-rose-300",
 };
@@ -28,7 +29,7 @@ export default async function AdminDashboard() {
     }),
   ]);
 
-  const phaseCount: Record<Phase, number> = { Writing: 0, Review: 0, Design: 0, Publish: 0, Closed: 0 };
+  const phaseCount: Record<Phase, number> = { Writing: 0, Review: 0, Design: 0, Development: 0, Publish: 0, Closed: 0 };
   for (const t of tasks) phaseCount[statusMeta(t.status).phase] += 1;
 
   const total = tasks.length;

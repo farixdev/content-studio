@@ -116,11 +116,12 @@ type TaskWithPeople = {
 export function canAccessTask(
   role: string,
   userId: string,
-  task: { writerId: string | null; designerId: string | null }
+  task: { writerId: string | null; designerId: string | null; developerId?: string | null }
 ): boolean {
   if (role === "ADMIN" || role === "REVIEWER") return true;
   if (role === "WRITER") return task.writerId === userId;
   if (role === "DESIGNER") return task.designerId === userId;
+  if (role === "DEVELOPER") return task.developerId === userId;
   return false;
 }
 

@@ -1,15 +1,16 @@
 // Central place for roles, statuses, and content types.
 // Everything the workflow keys off lives here so it is easy to tweak.
 
-export type Role = "ADMIN" | "WRITER" | "REVIEWER" | "DESIGNER";
+export type Role = "ADMIN" | "WRITER" | "REVIEWER" | "DESIGNER" | "DEVELOPER";
 
-export const ROLES: Role[] = ["ADMIN", "WRITER", "REVIEWER", "DESIGNER"];
+export const ROLES: Role[] = ["ADMIN", "WRITER", "REVIEWER", "DESIGNER", "DEVELOPER"];
 
 export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: "Admin / Manager",
   WRITER: "Content Writer",
   REVIEWER: "Reviewer",
   DESIGNER: "Designer",
+  DEVELOPER: "Developer",
 };
 
 export const ROLE_HOME: Record<Role, string> = {
@@ -17,9 +18,10 @@ export const ROLE_HOME: Record<Role, string> = {
   WRITER: "/writer",
   REVIEWER: "/reviewer",
   DESIGNER: "/designer",
+  DEVELOPER: "/developer",
 };
 
-export const MANAGEABLE_ROLES: Role[] = ["WRITER", "REVIEWER", "DESIGNER"];
+export const MANAGEABLE_ROLES: Role[] = ["WRITER", "REVIEWER", "DESIGNER", "DEVELOPER"];
 
 // ---------------------------------------------------------------------------
 // Statuses (the pipeline). Order here defines pipeline / kanban order.
@@ -36,12 +38,16 @@ export type Status =
   | "DESIGN_NOW"
   | "DESIGNING"
   | "DESIGNED"
+  | "DESIGN_IMPROVEMENT"
+  | "DEV_NOW"
+  | "DEVELOPING"
+  | "DEVELOPED"
   | "POST_NOW"
   | "POSTED"
   | "SEO_OPTIMIZED"
   | "CANCELLED";
 
-export type Phase = "Writing" | "Review" | "Design" | "Publish" | "Closed";
+export type Phase = "Writing" | "Review" | "Design" | "Development" | "Publish" | "Closed";
 
 export interface StatusMeta {
   label: string;
@@ -61,6 +67,10 @@ export const STATUS_META: Record<Status, StatusMeta> = {
   DESIGN_NOW: { label: "Design Now", phase: "Design", badge: "bg-purple-100 text-purple-700 ring-purple-200", dot: "bg-purple-500" },
   DESIGNING: { label: "Designing", phase: "Design", badge: "bg-fuchsia-100 text-fuchsia-700 ring-fuchsia-200", dot: "bg-fuchsia-500" },
   DESIGNED: { label: "Designed", phase: "Design", badge: "bg-teal-100 text-teal-700 ring-teal-200", dot: "bg-teal-500" },
+  DESIGN_IMPROVEMENT: { label: "Design Changes", phase: "Design", badge: "bg-orange-100 text-orange-700 ring-orange-200", dot: "bg-orange-500" },
+  DEV_NOW: { label: "Develop Now", phase: "Development", badge: "bg-sky-100 text-sky-700 ring-sky-200", dot: "bg-sky-500" },
+  DEVELOPING: { label: "Developing", phase: "Development", badge: "bg-blue-100 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
+  DEVELOPED: { label: "Developed", phase: "Development", badge: "bg-indigo-100 text-indigo-700 ring-indigo-200", dot: "bg-indigo-500" },
   POST_NOW: { label: "Post Now", phase: "Publish", badge: "bg-cyan-100 text-cyan-700 ring-cyan-200", dot: "bg-cyan-500" },
   POSTED: { label: "Posted", phase: "Publish", badge: "bg-green-100 text-green-700 ring-green-200", dot: "bg-green-500" },
   SEO_OPTIMIZED: { label: "SEO Optimized", phase: "Publish", badge: "bg-emerald-100 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
@@ -77,19 +87,24 @@ export const STATUS_ORDER: Status[] = [
   "REVIEWED_BY_WAQAR",
   "DESIGN_NOW",
   "DESIGNING",
+  "DESIGN_IMPROVEMENT",
   "DESIGNED",
+  "DEV_NOW",
+  "DEVELOPING",
+  "DEVELOPED",
   "POST_NOW",
   "POSTED",
   "SEO_OPTIMIZED",
   "CANCELLED",
 ];
 
-export const PHASES: Phase[] = ["Writing", "Review", "Design", "Publish", "Closed"];
+export const PHASES: Phase[] = ["Writing", "Review", "Design", "Development", "Publish", "Closed"];
 
 export const PHASE_ACCENT: Record<Phase, string> = {
   Writing: "text-sky-600",
   Review: "text-violet-600",
   Design: "text-fuchsia-600",
+  Development: "text-blue-600",
   Publish: "text-emerald-600",
   Closed: "text-rose-600",
 };

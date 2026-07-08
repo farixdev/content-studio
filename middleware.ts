@@ -8,9 +8,26 @@ const ROLE_PREFIX: Record<Role, string> = {
   WRITER: "/writer",
   REVIEWER: "/reviewer",
   DESIGNER: "/designer",
+  DEVELOPER: "/developer",
 };
 
 const PROTECTED_PREFIXES = ["/admin", "/writer", "/reviewer", "/designer"];
+
+/** Reviewers co-manage content: they may also use the shared admin pages for
+ * projects, content, and member work history — but not the admin dashboard or
+ * team management. */
+function isAllowed(role: Role, pathname: string): boolean {
+  const prefix = ROLE_PREFIX[role];
+  if (prefix && pathname.startsWith(prefix)) return true;
+  if (role === "REVIEWER") {
+    return (
+      pathname.startsWith("/admin/projects") ||
+      pathname.startsWith("/admin/tasks") ||
+      /^\/admin\/team\/.+/.test(pathname)
+    );
+  }
+  return false;
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -26,8 +43,7 @@ export async function middleware(req: NextRequest) {
       url.searchParams.set("next", pathname);
       return NextResponse.redirect(url);
     }
-    const allowedPrefix = ROLE_PREFIX[session.role];
-    if (allowedPrefix && !pathname.startsWith(allowedPrefix)) {
+    if (!isAllowed(session.role, pathname)) {
       const url = req.nextUrl.clone();
       url.pathname = ROLE_HOME[session.role];
       return NextResponse.redirect(url);

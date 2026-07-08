@@ -19,6 +19,10 @@ export interface TaskDetail {
   contentFile: FileRef | null;
   designInstructions: string | null;
   designAsset: FileRef | null;
+  figmaLink: string | null;
+  developer: { id: string; name: string } | null;
+  devInstructions: string | null;
+  devLink: string | null;
   websiteLink: string | null;
   remarks: string | null;
   writer: { id: string; name: string } | null;
@@ -61,6 +65,7 @@ export async function getTaskDetail(id: string): Promise<TaskDetail | null> {
     include: {
       writer: true,
       designer: true,
+      developer: true,
       guideFile: true,
       contentFile: true,
       designAsset: true,
@@ -87,6 +92,10 @@ export async function getTaskDetail(id: string): Promise<TaskDetail | null> {
     contentFile: fileRef(t.contentFile),
     designInstructions: t.designInstructions,
     designAsset: fileRef(t.designAsset),
+    figmaLink: t.figmaLink,
+    developer: t.developer ? { id: t.developer.id, name: t.developer.name } : null,
+    devInstructions: t.devInstructions,
+    devLink: t.devLink,
     websiteLink: t.websiteLink,
     remarks: t.remarks,
     writer: t.writer ? { id: t.writer.id, name: t.writer.name } : null,

@@ -6,6 +6,7 @@ import { GuideCard } from "@/components/task/guide-card";
 import { ContentCard } from "@/components/task/content-card";
 import { AiAudit } from "@/components/task/ai-audit";
 import { DesignCard } from "@/components/task/design-card";
+import { DevCard } from "@/components/task/dev-card";
 import { StatusTimeline } from "@/components/task/status-timeline";
 import { ReviewSummary } from "@/components/task/review-summary";
 import { Comments } from "@/components/task/comments";
@@ -18,7 +19,7 @@ export default async function AdminTaskDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [task, writers, designers] = await Promise.all([
+  const [task, writers, designers, developers] = await Promise.all([
     getTaskDetail(id),
     prisma.user.findMany({
       where: { role: "WRITER", active: true },
@@ -27,6 +28,11 @@ export default async function AdminTaskDetailPage({
     }),
     prisma.user.findMany({
       where: { role: "DESIGNER", active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.user.findMany({
+      where: { role: "DEVELOPER", active: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -46,7 +52,16 @@ export default async function AdminTaskDetailPage({
             guideText={task.guideText}
             contentType={task.contentType}
           />
-          <DesignCard designInstructions={task.designInstructions} designAsset={task.designAsset} />
+          <DesignCard
+            designInstructions={task.designInstructions}
+            designAsset={task.designAsset}
+            figmaLink={task.figmaLink}
+          />
+          <DevCard
+            devInstructions={task.devInstructions}
+            devLink={task.devLink}
+            developerName={task.developer?.name}
+          />
           {task.remarks && (
             <Card className="p-5">
               <div className="mb-1 text-sm font-semibold text-foreground">Remarks</div>
@@ -56,7 +71,7 @@ export default async function AdminTaskDetailPage({
           <Comments taskId={task.id} initial={task.comments} />
         </div>
         <div className="space-y-6">
-          <AdminActions task={task} writers={writers} designers={designers} />
+          <AdminActions task={task} writers={writers} designers={designers} developers={developers} />
           <Card className="p-5">
             <h3 className="mb-4 text-sm font-semibold text-foreground">Review</h3>
             <ReviewSummary approvals={task.approvals} issues={task.issues} />

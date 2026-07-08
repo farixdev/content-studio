@@ -25,6 +25,7 @@ model User {
   tasksCreated   Task[]           @relation("TaskCreatedBy")
   tasksWriting   Task[]           @relation("TaskWriter")
   tasksDesigning Task[]           @relation("TaskDesigner")
+  tasksDeveloping Task[]          @relation("TaskDeveloper")
   issuesRaised   ReviewIssue[]
   reviews        ReviewApproval[]
   statusChanges  StatusHistory[]
@@ -69,6 +70,13 @@ model Task {
   designInstructions String?
   designAssetId      String?
   designAsset        Upload? @relation("DesignAsset", fields: [designAssetId], references: [id])
+  figmaLink          String?
+
+  // Developer stage
+  developerId     String?
+  developer       User?   @relation("TaskDeveloper", fields: [developerId], references: [id])
+  devInstructions String?
+  devLink         String?
 
   // Publish stage
   websiteLink String?
@@ -89,6 +97,7 @@ model Task {
   @@index([status])
   @@index([writerId])
   @@index([designerId])
+  @@index([developerId])
   @@index([date])
   @@index([projectId])
 }
