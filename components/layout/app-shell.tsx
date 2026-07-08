@@ -7,6 +7,7 @@ import { Menu, X, LogOut, ChevronsUpDown } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { UserAvatar } from "@/components/user-avatar";
 import { LiveRefresh } from "@/components/live-refresh";
+import { ChatBubble } from "@/components/chat/chat-bubble";
 import { NotificationBell, type NotificationItem } from "./notification-bell";
 import { navForRole, isNavActive } from "./nav";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
@@ -95,6 +96,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-background">
       <LiveRefresh />
+      <ChatBubble me={{ id: user.id, name: user.name, role: user.role }} />
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-border bg-white lg:block">
         {sidebar}
       </aside>
