@@ -53,3 +53,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   return ok({ id: task.id });
 }
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await apiUser("ADMIN");
+  if (!user) return unauthorized();
+  const { id } = await params;
+
+  const existing = await prisma.task.findUnique({ where: { id } });
+  if (!existing) return notFound("Task not found.");
+
+  // Child records (issues, approvals, status history, comments, notifications)
+  // cascade at the DB level.
+  await prisma.task.delete({ where: { id } });
+
+  return ok({ id });
+}

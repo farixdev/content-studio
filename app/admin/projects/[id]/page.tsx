@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getProjectDetail } from "@/lib/projects";
+import { getCurrentUser } from "@/lib/session";
 import { ProjectDetailView } from "@/components/admin/project-detail-view";
 import type { Role } from "@/lib/constants";
 
@@ -15,6 +16,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     select: { id: true, name: true, username: true, role: true },
   });
   const candidates = users.map((u) => ({ ...u, role: u.role as Role }));
+  const me = await getCurrentUser();
 
-  return <ProjectDetailView project={project} candidates={candidates} />;
+  return (
+    <ProjectDetailView
+      project={project}
+      candidates={candidates}
+      canDelete={me?.role === "ADMIN"}
+    />
+  );
 }

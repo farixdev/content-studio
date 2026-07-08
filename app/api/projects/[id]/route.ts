@@ -33,3 +33,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   return ok({ id });
 }
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await apiUser("ADMIN");
+  if (!user) return unauthorized();
+  const { id } = await params;
+
+  const existing = await prisma.project.findUnique({ where: { id } });
+  if (!existing) return notFound("Project not found.");
+
+  // Delete the project and everything in it. Its content (tasks) must go first
+  // because Task→Project is Restrict; task children (issues, approvals, history,
+  // comments, notifications) and project members cascade at the DB level.
+  await prisma.$transaction([
+    prisma.task.deleteMany({ where: { projectId: id } }),
+    prisma.project.delete({ where: { id } }),
+  ]);
+
+  return ok({ id });
+}

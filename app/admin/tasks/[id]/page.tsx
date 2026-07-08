@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTaskDetail } from "@/lib/detail";
+import { getCurrentUser } from "@/lib/session";
 import { TaskHeading } from "@/components/task/task-heading";
 import { GuideCard } from "@/components/task/guide-card";
 import { ContentCard } from "@/components/task/content-card";
@@ -19,7 +20,7 @@ export default async function AdminTaskDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [task, writers, designers, developers] = await Promise.all([
+  const [task, writers, designers, developers, me] = await Promise.all([
     getTaskDetail(id),
     prisma.user.findMany({
       where: { role: "WRITER", active: true },
@@ -36,6 +37,7 @@ export default async function AdminTaskDetailPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    getCurrentUser(),
   ]);
   if (!task) notFound();
 
@@ -71,7 +73,13 @@ export default async function AdminTaskDetailPage({
           <Comments taskId={task.id} initial={task.comments} />
         </div>
         <div className="space-y-6">
-          <AdminActions task={task} writers={writers} designers={designers} developers={developers} />
+          <AdminActions
+            task={task}
+            writers={writers}
+            designers={designers}
+            developers={developers}
+            canDelete={me?.role === "ADMIN"}
+          />
           <Card className="p-5">
             <h3 className="mb-4 text-sm font-semibold text-foreground">Review</h3>
             <ReviewSummary approvals={task.approvals} issues={task.issues} />
