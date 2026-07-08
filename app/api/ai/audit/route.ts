@@ -13,6 +13,12 @@ export interface AuditIssue {
   type: "grammar" | "factual" | "clarity" | "structure" | "seo" | "tone";
   note: string;
 }
+export interface AuditComment {
+  quote: string; // verbatim span from the content, so the UI can highlight it
+  comment: string;
+  severity: "high" | "medium" | "low";
+  type: "grammar" | "factual" | "clarity" | "structure" | "seo" | "tone";
+}
 export interface AuditResult {
   overall_score: number;
   verdict: string;
@@ -22,6 +28,7 @@ export interface AuditResult {
   realism_score: number;
   on_brief: number;
   issues: AuditIssue[];
+  comments: AuditComment[];
   suggestions: string[];
   red_flags: string[];
   words: number;
@@ -65,6 +72,14 @@ export async function POST(req: Request) {
     `  issues (array up to 10 of {"severity": one of [high,medium,low], ` +
     `"type": one of [grammar,factual,clarity,structure,seo,tone], ` +
     `"note": short specific description})\n` +
+    `  comments (array up to 12 of {"quote": the EXACT sentence or phrase ` +
+    `copied VERBATIM from the content that needs a change — it MUST appear ` +
+    `word-for-word in the content so the app can highlight it, "comment": a ` +
+    `specific, actionable note on what to change and why (for the writer), ` +
+    `"severity": one of [high,medium,low], "type": one of ` +
+    `[grammar,factual,clarity,structure,seo,tone]}) — anchor each comment to ` +
+    `the precise place in the text that needs fixing; prefer these over generic ` +
+    `issues\n` +
     `  suggestions (array up to 8 short pieces of advice for the writer — ` +
     `advice only, never rewritten sentences)\n` +
     `  red_flags (array up to 6 specific statements that seem false, ` +
