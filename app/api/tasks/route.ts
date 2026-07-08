@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { apiUser, badRequest, ok, unauthorized } from "@/lib/api";
-import { nextRefCode, notifyUser } from "@/lib/tasks";
+import { nextRefCode, notifyUser, notifyAdmins } from "@/lib/tasks";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -15,7 +15,7 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  const user = await apiUser("ADMIN");
+  const user = await apiUser(["ADMIN", "REVIEWER"]);
   if (!user) return unauthorized();
 
   const body = await req.json().catch(() => null);
@@ -56,6 +56,11 @@ export async function POST(req: Request) {
       create: { projectId: d.projectId, userId: d.writerId },
     });
     await notifyUser(d.writerId, "ASSIGNED", `You've been assigned: ${task.title}`, task.id);
+  }
+
+  // Keep the admin in the loop when a reviewer creates content.
+  if (user.role === "REVIEWER") {
+    await notifyAdmins("CREATED", `${user.name} created: ${task.title}`, task.id);
   }
 
   return ok({ id: task.id, refCode });

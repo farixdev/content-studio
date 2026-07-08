@@ -6,7 +6,7 @@ import { notifyUser } from "@/lib/tasks";
 const schema = z.object({ userId: z.string().min(1) });
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await apiUser("ADMIN");
+  const admin = await apiUser(["ADMIN", "REVIEWER"]);
   if (!admin) return unauthorized();
   const { id } = await params;
 
@@ -18,7 +18,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!parsed.success) return badRequest("Pick a member to add.");
 
   const member = await prisma.user.findFirst({
-    where: { id: parsed.data.userId, active: true, role: { in: ["WRITER", "REVIEWER", "DESIGNER"] } },
+    where: { id: parsed.data.userId, active: true, role: { in: ["WRITER", "REVIEWER", "DESIGNER", "DEVELOPER"] } },
   });
   if (!member) return badRequest("That person is not available.");
 
@@ -41,7 +41,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await apiUser("ADMIN");
+  const admin = await apiUser(["ADMIN", "REVIEWER"]);
   if (!admin) return unauthorized();
   const { id } = await params;
 

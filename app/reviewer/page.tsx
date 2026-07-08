@@ -9,9 +9,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function ReviewerHome() {
   const user = await requireRole("REVIEWER");
-  const [queue, mine] = await Promise.all([
+  const [queue, designs, mine] = await Promise.all([
     prisma.task.findMany({
       where: { status: { in: REVIEW_PHASE } },
+      include: { writer: { select: { name: true } }, designer: { select: { name: true } }, project: { select: { name: true } } },
+      orderBy: { updatedAt: "asc" },
+    }),
+    prisma.task.findMany({
+      where: { status: "DESIGNED" },
       include: { writer: { select: { name: true } }, designer: { select: { name: true } }, project: { select: { name: true } } },
       orderBy: { updatedAt: "asc" },
     }),
@@ -29,7 +34,7 @@ export default async function ReviewerHome() {
         title="Review queue"
         description="Content waiting for your sign-off, or send-back."
       />
-      {queue.length === 0 && mine.length === 0 ? (
+      {queue.length === 0 && designs.length === 0 && mine.length === 0 ? (
         <EmptyState
           icon={ClipboardCheck}
           title="Nothing to review"
@@ -38,6 +43,9 @@ export default async function ReviewerHome() {
       ) : (
         <>
           <TaskGroup title="Awaiting review" tasks={queue.map(toListItem)} hrefBase="/reviewer/tasks" />
+          {designs.length > 0 && (
+            <TaskGroup title="Designs to approve" tasks={designs.map(toListItem)} hrefBase="/admin/tasks" />
+          )}
           <TaskGroup title="Recently reviewed by you" tasks={mine.map(toListItem)} hrefBase="/reviewer/tasks" />
         </>
       )}

@@ -7,42 +7,36 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UploadField, type UploadedFile } from "@/components/upload-field";
 import { toast } from "sonner";
 
-export function DesignerActions({
+export function DeveloperActions({
   taskId,
   status,
-  figmaLink: initialFigma,
+  devLink: initialLink,
 }: {
   taskId: string;
   status: string;
-  figmaLink?: string | null;
+  devLink?: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
-  const [asset, setAsset] = useState<UploadedFile | null>(null);
-  const [figmaLink, setFigmaLink] = useState(initialFigma ?? "");
+  const [devLink, setDevLink] = useState(initialLink ?? "");
 
   async function run(action: "start" | "submit") {
-    if (action === "submit" && !figmaLink.trim() && !asset) {
-      return toast.error("Add your Figma link (or upload the design) first.");
+    if (action === "submit" && !devLink.trim()) {
+      return toast.error("Add the link to the built page first.");
     }
     setBusy(action);
     try {
-      const res = await fetch(`/api/tasks/${taskId}/design`, {
+      const res = await fetch(`/api/tasks/${taskId}/develop`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action,
-          figmaLink: figmaLink.trim() || null,
-          designAssetId: asset?.id ?? null,
-        }),
+        body: JSON.stringify({ action, devLink: devLink.trim() || null }),
       });
       const data = await res.json();
       if (!res.ok) toast.error(data.error ?? "Something went wrong.");
       else {
-        toast.success(action === "start" ? "Marked as designing" : "Design submitted for approval 🎨");
+        toast.success(action === "start" ? "Marked as developing" : "Build delivered 🚀");
         router.refresh();
       }
     } catch {
@@ -52,40 +46,30 @@ export function DesignerActions({
     }
   }
 
-  const canStart = status === "DESIGN_NOW" || status === "DESIGN_IMPROVEMENT";
-
   return (
     <Card className="p-4">
       <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Design actions
+        Development actions
       </p>
       <div className="space-y-3">
-        {canStart && (
+        {status === "DEV_NOW" && (
           <Button className="w-full" variant="subtle" onClick={() => run("start")} disabled={busy !== null}>
             {busy === "start" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            {status === "DESIGN_IMPROVEMENT" ? "Start changes" : "Start designing"}
+            Start building
           </Button>
         )}
         <div className="space-y-1.5">
-          <Label htmlFor="figma">Figma link</Label>
+          <Label htmlFor="dev-link">Built page link</Label>
           <Input
-            id="figma"
-            value={figmaLink}
-            onChange={(e) => setFigmaLink(e.target.value)}
-            placeholder="https://www.figma.com/file/…"
+            id="dev-link"
+            value={devLink}
+            onChange={(e) => setDevLink(e.target.value)}
+            placeholder="https://…"
           />
         </div>
-        <div className="space-y-1.5">
-          <Label>Or upload the design (optional)</Label>
-          <UploadField value={asset} onChange={setAsset} label="Upload design file" />
-        </div>
-        <Button
-          className="w-full"
-          onClick={() => run("submit")}
-          disabled={busy !== null || (!figmaLink.trim() && !asset)}
-        >
+        <Button className="w-full" onClick={() => run("submit")} disabled={busy !== null || !devLink.trim()}>
           {busy === "submit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-          Submit design for approval
+          Mark as developed
         </Button>
       </div>
     </Card>

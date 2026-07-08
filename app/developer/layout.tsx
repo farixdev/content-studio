@@ -2,10 +2,8 @@ import { requireRole } from "@/lib/session";
 import { AppShell } from "@/components/layout/app-shell";
 import { shellNotifications } from "@/lib/tasks";
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  // Reviewers may use the shared admin pages (projects/content) — the
-  // middleware limits exactly which /admin paths they can reach.
-  const user = await requireRole(["ADMIN", "REVIEWER"]);
+export default async function DeveloperLayout({ children }: { children: React.ReactNode }) {
+  const user = await requireRole("DEVELOPER");
   const notifications = await shellNotifications(user.id);
   return (
     <AppShell

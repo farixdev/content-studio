@@ -10,7 +10,7 @@ const schema = z.object({
 });
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const user = await apiUser("ADMIN");
+  const user = await apiUser(["ADMIN", "REVIEWER"]);
   if (!user) return unauthorized();
   const { id } = await params;
 

@@ -6,7 +6,7 @@ import { baseUsername, generatePassword } from "@/lib/credentials";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
-  role: z.enum(["WRITER", "REVIEWER", "DESIGNER"]),
+  role: z.enum(["WRITER", "REVIEWER", "DESIGNER", "DEVELOPER"]),
 });
 
 export async function POST(req: Request) {

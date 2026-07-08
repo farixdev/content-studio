@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn, timeAgo } from "@/lib/utils";
@@ -30,6 +30,20 @@ export function NotificationBell({ initial }: { initial: NotificationItem[] }) {
       /* ignore */
     }
   }
+
+  // Keep the badge live: poll while the tab is visible and on window focus.
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    const id = setInterval(tick, 30000);
+    window.addEventListener("focus", tick);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", tick);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function markAll() {
     setItems((prev) => prev.map((i) => ({ ...i, read: true })));

@@ -40,6 +40,7 @@ async function main() {
   const ayesha = await upsertUser({ name: "Ayesha Khan", username: "ayesha", password: "ayesha123", role: "WRITER" });
   const hamza = await upsertUser({ name: "Hamza Ali", username: "hamza", password: "hamza123", role: "WRITER" });
   const sara = await upsertUser({ name: "Sara Malik", username: "sara", password: "sara123", role: "DESIGNER" });
+  const bilal = await upsertUser({ name: "Bilal Dev", username: "bilal", password: "bilal123", role: "DEVELOPER" });
 
   // Fresh content + projects each seed.
   await prisma.notification.deleteMany({});
@@ -67,7 +68,7 @@ async function main() {
   // Who works on which project.
   await prisma.projectMember.createMany({
     data: [
-      ...[ayesha.id, hamza.id, umar.id, waqar.id, sara.id].map((userId) => ({ projectId: mindcob.id, userId })),
+      ...[ayesha.id, hamza.id, umar.id, waqar.id, sara.id, bilal.id].map((userId) => ({ projectId: mindcob.id, userId })),
       ...[ayesha.id, umar.id, sara.id].map((userId) => ({ projectId: acme.id, userId })),
     ],
   });

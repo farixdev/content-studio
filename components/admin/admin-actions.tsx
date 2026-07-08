@@ -11,6 +11,8 @@ import {
   Loader2,
   Link2,
   ArrowRight,
+  ExternalLink,
+  Code2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { UploadField, type UploadedFile } from "@/components/upload-field";
 import { CONTENT_TYPES, STATUS_ORDER, statusMeta } from "@/lib/constants";
-import { isReviewPhase, isFullyReviewed } from "@/lib/workflow";
+import { isReviewPhase, isFullyReviewed, isDesignReview } from "@/lib/workflow";
 import type { TaskDetail } from "@/lib/detail";
 import { toast } from "sonner";
 
@@ -44,10 +46,12 @@ export function AdminActions({
   task,
   writers,
   designers,
+  developers,
 }: {
   task: TaskDetail;
   writers: People;
   designers: People;
+  developers: People;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -63,6 +67,12 @@ export function AdminActions({
   const [designerId, setDesignerId] = useState(task.designer?.id ?? "");
   const [designInstructions, setDesignInstructions] = useState(task.designInstructions ?? "");
 
+  const [approveOpen, setApproveOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [developerId, setDeveloperId] = useState(task.developer?.id ?? "");
+  const [devInstructions, setDevInstructions] = useState(task.devInstructions ?? "");
+  const [rejectReason, setRejectReason] = useState("");
+
   const [editOpen, setEditOpen] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [contentType, setContentType] = useState(task.contentType);
@@ -75,7 +85,7 @@ export function AdminActions({
     setBusy(key);
     try {
       const res = await fetch(url, {
-        method: url.includes("/tasks/") && !url.match(/\/(status|submit|review|assign-designer|design|comments)$/)
+        method: url.includes("/tasks/") && !url.match(/\/(status|submit|review|design-review|develop|assign-designer|design|comments)$/)
           ? "PATCH"
           : "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,6 +129,33 @@ export function AdminActions({
             <Button variant="outline" disabled={busy !== null} onClick={() => setIssueOpen(true)}>
               <RotateCcw className="h-4 w-4" />
               Send back
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Design approval */}
+      {isDesignReview(task.status) && (
+        <Card className="p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Design approval
+          </p>
+          {task.figmaLink && (
+            <a
+              href={task.figmaLink}
+              target="_blank"
+              rel="noreferrer"
+              className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm font-medium text-primary transition hover:bg-muted"
+            >
+              <ExternalLink className="h-4 w-4" /> Open the Figma design
+            </a>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <Button disabled={busy !== null} onClick={() => setApproveOpen(true)}>
+              <CheckCircle2 className="h-4 w-4" /> Approve
+            </Button>
+            <Button variant="outline" disabled={busy !== null} onClick={() => setRejectOpen(true)}>
+              <RotateCcw className="h-4 w-4" /> Reject
             </Button>
           </div>
         </Card>
@@ -404,6 +441,113 @@ export function AdminActions({
             >
               {busy === "edit" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Save changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve design + assign developer */}
+      <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve design &amp; assign developer</DialogTitle>
+            <DialogDescription>
+              The approved design is handed to the developer you pick.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Developer</Label>
+              <Select value={developerId} onValueChange={setDeveloperId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pick a developer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {developers.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {developers.length === 0 && (
+                <p className="text-xs text-amber-600">
+                  No developers yet — add one under Team first.
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Instructions for the developer</Label>
+              <Textarea
+                value={devInstructions}
+                onChange={(e) => setDevInstructions(e.target.value)}
+                placeholder="Framework, responsive rules, CMS, page URL, deadline…"
+                className="min-h-[110px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setApproveOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={busy !== null || !developerId}
+              onClick={() =>
+                call(
+                  "approve-design",
+                  `/api/tasks/${task.id}/design-review`,
+                  { action: "approve", developerId, devInstructions },
+                  "Design approved — sent to developer",
+                  () => setApproveOpen(false)
+                )
+              }
+            >
+              {busy === "approve-design" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Code2 className="h-4 w-4" />
+              )}
+              Approve &amp; assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject design */}
+      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject design</DialogTitle>
+            <DialogDescription>Send it back to the designer with a reason.</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="What needs to change in the design?"
+            className="min-h-[110px]"
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRejectOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={busy !== null}
+              onClick={() =>
+                call(
+                  "reject-design",
+                  `/api/tasks/${task.id}/design-review`,
+                  { action: "reject", reason: rejectReason },
+                  "Sent back to designer",
+                  () => {
+                    setRejectOpen(false);
+                    setRejectReason("");
+                  }
+                )
+              }
+            >
+              {busy === "reject-design" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              Reject design
             </Button>
           </DialogFooter>
         </DialogContent>

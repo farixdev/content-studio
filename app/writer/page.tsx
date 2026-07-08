@@ -1,10 +1,11 @@
-import { PenLine } from "lucide-react";
+import { PenLine, FileText, ClipboardCheck, Rocket, Hash } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { toListItem } from "@/lib/tasks";
 import { PageHeader } from "@/components/layout/page-header";
 import { TaskGroup } from "@/components/task/task-group";
 import { EmptyState } from "@/components/ui/empty-state";
+import { StatCard } from "@/components/ui/stat-card";
 
 export default async function WriterHome() {
   const user = await requireRole("WRITER");
@@ -30,12 +31,24 @@ export default async function WriterHome() {
     { title: "Cancelled", tasks: pick(["CANCELLED"]) },
   ];
 
+  const inReview = pick(["WRITTEN", "ISSUE_RESOLVED", "REVIEWED_BY_UMAR", "REVIEWED_BY_WAQAR"]).length;
+  const published = pick(["POSTED", "SEO_OPTIMIZED"]).length;
+  const words = items.reduce((s, t) => s + (t.words || 0), 0);
+
   return (
     <div>
       <PageHeader
         title={`Hi ${user.name.split(" ")[0]} 👋`}
         description="Here's everything assigned to you."
       />
+      {items.length > 0 && (
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="My content" value={items.length} icon={FileText} tone="primary" />
+          <StatCard label="In review" value={inReview} icon={ClipboardCheck} tone="violet" />
+          <StatCard label="Published" value={published} icon={Rocket} tone="emerald" />
+          <StatCard label="Words written" value={words.toLocaleString()} icon={Hash} tone="amber" />
+        </div>
+      )}
       {items.length === 0 ? (
         <EmptyState
           icon={PenLine}

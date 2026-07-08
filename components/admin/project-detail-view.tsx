@@ -53,6 +53,7 @@ const ROLE_GROUPS: { role: Role; label: string }[] = [
   { role: "WRITER", label: "Writers" },
   { role: "REVIEWER", label: "Reviewers" },
   { role: "DESIGNER", label: "Designers" },
+  { role: "DEVELOPER", label: "Developers" },
 ];
 
 type Candidate = { id: string; name: string; username: string; role: Role };

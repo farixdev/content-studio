@@ -59,6 +59,7 @@ const ROLE_TABS: { role: Role; label: string }[] = [
   { role: "WRITER", label: "Writers" },
   { role: "REVIEWER", label: "Reviewers" },
   { role: "DESIGNER", label: "Designers" },
+  { role: "DEVELOPER", label: "Developers" },
 ];
 
 function CopyRow({ label, value }: { label: string; value: string }) {
@@ -96,6 +97,10 @@ export function TeamView({ users }: { users: Member[] }) {
 
   const [creds, setCreds] = useState<Creds | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
+
+  const [resetTarget, setResetTarget] = useState<Member | null>(null);
+  const [resetMode, setResetMode] = useState<"generate" | "custom">("generate");
+  const [customPw, setCustomPw] = useState("");
 
   async function addMember() {
     if (!newName.trim()) return toast.error("Enter a name.");
@@ -142,17 +147,30 @@ export function TeamView({ users }: { users: Member[] }) {
     }
   }
 
-  async function resetPassword(m: Member) {
+  async function resetPassword() {
+    if (!resetTarget) return;
+    if (resetMode === "custom" && customPw.trim().length < 6) {
+      return toast.error("Custom password must be at least 6 characters.");
+    }
+    const m = resetTarget;
     setBusy(m.id);
     try {
       const res = await fetch(`/api/users/${m.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resetPassword: true }),
+        body: JSON.stringify({
+          resetPassword: true,
+          ...(resetMode === "custom" ? { newPassword: customPw.trim() } : {}),
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        toast.error(data.error ?? "Could not reset password.");
+        return;
+      }
+      setResetTarget(null);
       setCreds(data.credentials);
+      toast.success(`Password changed — ${m.name.split(" ")[0]}'s old password no longer works.`);
     } catch {
       toast.error("Could not reset password.");
     } finally {
@@ -246,7 +264,13 @@ export function TeamView({ users }: { users: Member[] }) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => resetPassword(m)}>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setResetMode("generate");
+                        setCustomPw("");
+                        setResetTarget(m);
+                      }}
+                    >
                       <KeyRound className="h-4 w-4" /> Reset password
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => toggleActive(m)}>
@@ -303,6 +327,75 @@ export function TeamView({ users }: { users: Member[] }) {
             <Button onClick={addMember} disabled={busy === "add"}>
               {busy === "add" ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
               Create member
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset password dialog */}
+      <Dialog open={!!resetTarget} onOpenChange={(o) => !o && setResetTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
+              <KeyRound className="h-6 w-6" />
+            </div>
+            <DialogTitle>Reset {resetTarget?.name.split(" ")[0]}&apos;s password</DialogTitle>
+            <DialogDescription>
+              This sets a new password for @{resetTarget?.username} immediately — their current
+              password will stop working.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setResetMode("generate")}
+                className={
+                  "rounded-xl border px-3 py-2.5 text-left text-sm transition " +
+                  (resetMode === "generate"
+                    ? "border-primary bg-primary-50 font-medium text-primary-700"
+                    : "border-border text-muted-foreground hover:bg-muted")
+                }
+              >
+                Generate a strong password
+              </button>
+              <button
+                type="button"
+                onClick={() => setResetMode("custom")}
+                className={
+                  "rounded-xl border px-3 py-2.5 text-left text-sm transition " +
+                  (resetMode === "custom"
+                    ? "border-primary bg-primary-50 font-medium text-primary-700"
+                    : "border-border text-muted-foreground hover:bg-muted")
+                }
+              >
+                Set my own password
+              </button>
+            </div>
+            {resetMode === "custom" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="custom-pw">New password</Label>
+                <Input
+                  id="custom-pw"
+                  value={customPw}
+                  onChange={(e) => setCustomPw(e.target.value)}
+                  placeholder="At least 6 characters"
+                  autoFocus
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setResetTarget(null)}>
+              Cancel
+            </Button>
+            <Button onClick={resetPassword} disabled={busy === resetTarget?.id}>
+              {busy === resetTarget?.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <KeyRound className="h-4 w-4" />
+              )}
+              Reset password
             </Button>
           </DialogFooter>
         </DialogContent>

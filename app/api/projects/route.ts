@@ -10,7 +10,7 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  const user = await apiUser("ADMIN");
+  const user = await apiUser(["ADMIN", "REVIEWER"]);
   if (!user) return unauthorized();
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   let validMemberIds: string[] = [];
   if (d.memberIds && d.memberIds.length) {
     const valid = await prisma.user.findMany({
-      where: { id: { in: d.memberIds }, active: true, role: { in: ["WRITER", "REVIEWER", "DESIGNER"] } },
+      where: { id: { in: d.memberIds }, active: true, role: { in: ["WRITER", "REVIEWER", "DESIGNER", "DEVELOPER"] } },
       select: { id: true },
     });
     validMemberIds = [...new Set(valid.map((u) => u.id))];

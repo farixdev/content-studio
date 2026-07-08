@@ -18,6 +18,7 @@ const ROLE_CONFIG: Record<Role, { verb: string; where: (id: string) => Prisma.Ta
   ADMIN: { verb: "created", where: (id) => ({ createdById: id }) },
   WRITER: { verb: "assigned", where: (id) => ({ writerId: id }) },
   DESIGNER: { verb: "designed", where: (id) => ({ designerId: id }) },
+  DEVELOPER: { verb: "developed", where: (id) => ({ developerId: id }) },
   REVIEWER: { verb: "reviewed", where: (id) => ({ approvals: { some: { reviewerId: id } } }) },
 };
 

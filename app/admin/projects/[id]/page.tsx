@@ -10,7 +10,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   if (!project) notFound();
 
   const users = await prisma.user.findMany({
-    where: { role: { in: ["WRITER", "REVIEWER", "DESIGNER"] }, active: true },
+    where: { role: { in: ["WRITER", "REVIEWER", "DESIGNER", "DEVELOPER"] }, active: true },
     orderBy: { name: "asc" },
     select: { id: true, name: true, username: true, role: true },
   });

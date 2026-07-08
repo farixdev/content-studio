@@ -7,6 +7,7 @@ import { generatePassword } from "@/lib/credentials";
 const schema = z.object({
   active: z.boolean().optional(),
   resetPassword: z.boolean().optional(),
+  newPassword: z.string().min(6, "Password must be at least 6 characters.").max(72).optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -19,13 +20,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (target.role === "ADMIN") return badRequest("The admin account can't be modified here.");
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return badRequest("Invalid data.");
+  if (!parsed.success) {
+    return badRequest(parsed.error.issues[0]?.message ?? "Invalid data.");
+  }
 
   const data: { active?: boolean; passwordHash?: string } = {};
   let newPassword: string | undefined;
   if (parsed.data.active !== undefined) data.active = parsed.data.active;
-  if (parsed.data.resetPassword) {
-    newPassword = generatePassword(10);
+  if (parsed.data.resetPassword || parsed.data.newPassword) {
+    // Either the admin chose a password, or we generate a strong one. The old
+    // password stops working the moment this update lands.
+    newPassword = parsed.data.newPassword?.trim() || generatePassword(10);
+    if (newPassword.length < 6) return badRequest("Password must be at least 6 characters.");
     data.passwordHash = await hashPassword(newPassword);
   }
 
