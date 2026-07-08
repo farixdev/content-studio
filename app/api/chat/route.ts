@@ -1,16 +1,20 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { apiUser, badRequest, ok, unauthorized } from "@/lib/api";
-import { getRecentMessages, getMessagesAfter } from "@/lib/chat";
+import { getRecentMessages, getMessagesAfter, getRoster, touchPresence } from "@/lib/chat";
 import { notifyUser } from "@/lib/tasks";
 
 export async function GET(req: Request) {
   const user = await apiUser();
   if (!user) return unauthorized();
 
+  // Any chat poll doubles as a presence heartbeat.
+  await touchPresence(user.id);
+
   const after = new URL(req.url).searchParams.get("after");
   const messages = after ? await getMessagesAfter(after) : await getRecentMessages(100);
-  return ok({ messages });
+  const roster = await getRoster();
+  return ok({ messages, roster });
 }
 
 const schema = z.object({ body: z.string().min(1).max(2000) });
@@ -23,6 +27,8 @@ export async function POST(req: Request) {
   if (!parsed.success) return badRequest("Type a message.");
   const body = parsed.data.body.trim();
   if (!body) return badRequest("Type a message.");
+
+  await touchPresence(user.id);
 
   const msg = await prisma.chatMessage.create({
     data: { authorId: user.id, body },

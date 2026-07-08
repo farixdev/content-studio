@@ -20,6 +20,7 @@ model User {
   // Plaintext of the current login, kept so the manager can view/re-share a
   // team member's credentials. Internal-tool convenience (manager-only view).
   plainPassword String?
+  lastSeenAt    DateTime?
   role          String // ADMIN | WRITER | REVIEWER | DESIGNER
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())

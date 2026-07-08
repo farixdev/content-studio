@@ -50,3 +50,35 @@ export async function getMessagesAfter(afterISO: string): Promise<ChatMsg[]> {
   });
   return rows.map(serialize);
 }
+
+export interface RosterMember {
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+  online: boolean;
+}
+
+// Considered "online" if seen within this window.
+const ONLINE_MS = 3 * 60 * 1000;
+
+export async function getRoster(): Promise<RosterMember[]> {
+  const rows = await prisma.user.findMany({
+    where: { active: true },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, username: true, role: true, lastSeenAt: true },
+  });
+  const now = Date.now();
+  return rows.map((u) => ({
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    role: u.role,
+    online: !!u.lastSeenAt && now - u.lastSeenAt.getTime() < ONLINE_MS,
+  }));
+}
+
+/** Mark a user active now (best-effort heartbeat). */
+export async function touchPresence(userId: string): Promise<void> {
+  await prisma.user.update({ where: { id: userId }, data: { lastSeenAt: new Date() } }).catch(() => {});
+}

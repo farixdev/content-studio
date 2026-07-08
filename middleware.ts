@@ -11,14 +11,12 @@ const ROLE_PREFIX: Record<Role, string> = {
   DEVELOPER: "/developer",
 };
 
-const PROTECTED_PREFIXES = ["/admin", "/writer", "/reviewer", "/designer", "/developer", "/chat"];
+const PROTECTED_PREFIXES = ["/admin", "/writer", "/reviewer", "/designer", "/developer"];
 
 /** Reviewers co-manage content: they may also use the shared admin pages for
  * projects, content, and member work history — but not the admin dashboard or
  * team management. */
 function isAllowed(role: Role, pathname: string): boolean {
-  // Team chat is open to every signed-in member.
-  if (pathname.startsWith("/chat")) return true;
   const prefix = ROLE_PREFIX[role];
   if (prefix && pathname.startsWith(prefix)) return true;
   if (role === "REVIEWER") {
@@ -68,7 +66,6 @@ export const config = {
     "/reviewer/:path*",
     "/designer/:path*",
     "/developer/:path*",
-    "/chat/:path*",
     "/login",
   ],
 };
