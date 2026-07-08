@@ -24,16 +24,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { UploadField, type UploadedFile } from "@/components/upload-field";
-import { CONTENT_TYPES } from "@/lib/constants";
 import { toast } from "sonner";
 
 export function CreateTaskForm({
   writers,
   projects,
+  contentTypes,
   defaultProjectId,
 }: {
   writers: { id: string; name: string }[];
   projects: { id: string; name: string }[];
+  contentTypes: string[];
   defaultProjectId?: string;
 }) {
   const router = useRouter();
@@ -168,7 +169,7 @@ export function CreateTaskForm({
                   <SelectValue placeholder="Select…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CONTENT_TYPES.map((t) => (
+                  {contentTypes.map((t) => (
                     <SelectItem key={t} value={t}>
                       {t}
                     </SelectItem>

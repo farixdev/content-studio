@@ -30,8 +30,82 @@ function serialize(m: Row): ChatMsg {
 
 const AUTHOR = { author: { select: { name: true, role: true } } } as const;
 
-export async function getRecentMessages(limit = 100): Promise<ChatMsg[]> {
+// ---------------------------------------------------------------------------
+// Who may message whom
+// ---------------------------------------------------------------------------
+// Managers (ADMIN) and Reviewers are "staff": they can message anyone. Writers,
+// Designers and Developers can ONLY message staff — never each other.
+const STAFF_ROLES = ["ADMIN", "REVIEWER"];
+
+export function isStaffRole(role: string): boolean {
+  return STAFF_ROLES.includes(role);
+}
+
+/** A conversation between two roles is allowed iff at least one side is staff. */
+export function canConverse(roleA: string, roleB: string): boolean {
+  return isStaffRole(roleA) || isStaffRole(roleB);
+}
+
+// ---------------------------------------------------------------------------
+// Contacts (the people the current user is allowed to message)
+// ---------------------------------------------------------------------------
+export interface Contact {
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+  online: boolean;
+  unread: number;
+}
+
+// Considered "online" if seen within this window.
+const ONLINE_MS = 3 * 60 * 1000;
+
+export async function getContacts(me: { id: string; role: string }): Promise<Contact[]> {
+  const where = isStaffRole(me.role)
+    ? { active: true, id: { not: me.id } } // staff can reach everyone
+    : { active: true, role: { in: STAFF_ROLES } }; // workers can only reach staff
+
+  const [users, unreadRows] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: [{ role: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, username: true, role: true, lastSeenAt: true },
+    }),
+    prisma.chatMessage.groupBy({
+      by: ["authorId"],
+      where: { recipientId: me.id, readAt: null },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const unread = new Map(unreadRows.map((r) => [r.authorId, r._count._all]));
+  const now = Date.now();
+  return users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    role: u.role,
+    online: !!u.lastSeenAt && now - u.lastSeenAt.getTime() < ONLINE_MS,
+    unread: unread.get(u.id) ?? 0,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// A single conversation
+// ---------------------------------------------------------------------------
+export async function getConversation(
+  meId: string,
+  otherId: string,
+  limit = 100
+): Promise<ChatMsg[]> {
   const rows = await prisma.chatMessage.findMany({
+    where: {
+      OR: [
+        { authorId: meId, recipientId: otherId },
+        { authorId: otherId, recipientId: meId },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     take: limit,
     include: AUTHOR,
@@ -39,49 +113,21 @@ export async function getRecentMessages(limit = 100): Promise<ChatMsg[]> {
   return rows.reverse().map(serialize);
 }
 
-export async function getMessagesAfter(afterISO: string): Promise<ChatMsg[]> {
-  const after = new Date(afterISO);
-  if (isNaN(after.getTime())) return [];
-  // `gte` (not `gt`): DateTime is millisecond precision, so messages sharing the
-  // boundary millisecond must be re-fetched. The client de-dupes by id.
-  const rows = await prisma.chatMessage.findMany({
-    where: { createdAt: { gte: after } },
-    orderBy: { createdAt: "asc" },
-    take: 200,
-    include: AUTHOR,
-  });
-  return rows.map(serialize);
+/** Mark the messages the other person sent me as read. */
+export async function markRead(meId: string, otherId: string): Promise<void> {
+  await prisma.chatMessage
+    .updateMany({
+      where: { recipientId: meId, authorId: otherId, readAt: null },
+      data: { readAt: new Date() },
+    })
+    .catch(() => {});
 }
 
-export interface RosterMember {
-  id: string;
-  name: string;
-  username: string;
-  role: string;
-  online: boolean;
-}
-
-// Considered "online" if seen within this window.
-const ONLINE_MS = 3 * 60 * 1000;
-
-export async function getRoster(): Promise<RosterMember[]> {
-  const rows = await prisma.user.findMany({
-    where: { active: true },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, username: true, role: true, lastSeenAt: true },
-  });
-  const now = Date.now();
-  return rows.map((u) => ({
-    id: u.id,
-    name: u.name,
-    username: u.username,
-    role: u.role,
-    online: !!u.lastSeenAt && now - u.lastSeenAt.getTime() < ONLINE_MS,
-  }));
-}
-
-/** Mark a user active now (best-effort). Throttled so a 10s poll doesn't write
- * on every request — only refresh once per minute. */
+// ---------------------------------------------------------------------------
+// Presence
+// ---------------------------------------------------------------------------
+/** Mark a user active now (best-effort). Throttled so a poll doesn't write on
+ * every request — only refresh once per minute. */
 export async function touchPresence(userId: string): Promise<void> {
   const cutoff = new Date(Date.now() - 60_000);
   await prisma.user

@@ -1,23 +1,23 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { apiUser, badRequest, ok, unauthorized } from "@/lib/api";
-import { getRecentMessages, getMessagesAfter, getRoster, touchPresence } from "@/lib/chat";
+import { apiUser, badRequest, forbidden, ok, unauthorized } from "@/lib/api";
+import { getContacts, canConverse, touchPresence } from "@/lib/chat";
 import { notifyUser } from "@/lib/tasks";
 
-export async function GET(req: Request) {
+export async function GET() {
   const user = await apiUser();
   if (!user) return unauthorized();
 
   // Any chat poll doubles as a presence heartbeat.
   await touchPresence(user.id);
-
-  const after = new URL(req.url).searchParams.get("after");
-  const messages = after ? await getMessagesAfter(after) : await getRecentMessages(100);
-  const roster = await getRoster();
-  return ok({ messages, roster });
+  const contacts = await getContacts(user);
+  return ok({ contacts });
 }
 
-const schema = z.object({ body: z.string().min(1).max(2000) });
+const schema = z.object({
+  recipientId: z.string().min(1),
+  body: z.string().min(1).max(2000),
+});
 
 export async function POST(req: Request) {
   const user = await apiUser();
@@ -28,26 +28,23 @@ export async function POST(req: Request) {
   const body = parsed.data.body.trim();
   if (!body) return badRequest("Type a message.");
 
+  const recipient = await prisma.user.findFirst({
+    where: { id: parsed.data.recipientId, active: true },
+    select: { id: true, name: true, role: true },
+  });
+  if (!recipient) return badRequest("That person is unavailable.");
+  if (recipient.id === user.id) return badRequest("You can't message yourself.");
+  // Enforce the messaging policy: workers may only talk to Manager/Reviewer.
+  if (!canConverse(user.role, recipient.role)) return forbidden();
+
   await touchPresence(user.id);
 
   const msg = await prisma.chatMessage.create({
-    data: { authorId: user.id, body },
+    data: { authorId: user.id, recipientId: recipient.id, body },
     include: { author: { select: { name: true, role: true } } },
   });
 
-  // @mentions → notify the tagged members. Must start a token (^ or space) so
-  // emails like me@example.com don't spuriously tag "example". Matches the client
-  // highlighter's standalone-token rule.
-  const tokens = [...body.matchAll(/(?:^|\s)@([a-z0-9]+)/gi)].map((m) => m[1].toLowerCase());
-  if (tokens.length) {
-    const mentioned = await prisma.user.findMany({
-      where: { username: { in: tokens }, active: true, id: { not: user.id } },
-      select: { id: true },
-    });
-    for (const u of mentioned) {
-      await notifyUser(u.id, "CHAT", `${user.name} tagged you in team chat`, null);
-    }
-  }
+  await notifyUser(recipient.id, "CHAT", `${user.name} messaged you`, null);
 
   return ok({
     message: {

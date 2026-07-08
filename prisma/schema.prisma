@@ -39,7 +39,8 @@ model User {
 
   projectsCreated    Project[]       @relation("ProjectCreatedBy")
   projectMemberships ProjectMember[]
-  chatMessages       ChatMessage[]
+  sentMessages       ChatMessage[]   @relation("SentMessages")
+  receivedMessages   ChatMessage[]   @relation("ReceivedMessages")
 }
 
 model Task {
@@ -222,13 +223,23 @@ model ProjectMember {
   @@index([userId])
 }
 
+// Direct (1:1) messages. Who may talk to whom is enforced in the app layer
+// (workers ↔ Manager/Reviewer only; Manager/Reviewer ↔ anyone).
 model ChatMessage {
-  id        String   @id @default(cuid())
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  body      String
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  authorId    String
+  author      User      @relation("SentMessages", fields: [authorId], references: [id], onDelete: Cascade)
+  // Nullable in the DB so migrations stay non-destructive (legacy group-chat
+  // rows keep a null recipient and simply never match a 1:1 conversation).
+  // Always set at the app layer for new messages.
+  recipientId String?
+  recipient   User?     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
 
+  @@index([authorId, recipientId, createdAt])
+  @@index([recipientId, readAt])
   @@index([createdAt])
 }
 
