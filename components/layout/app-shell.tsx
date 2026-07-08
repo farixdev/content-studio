@@ -8,9 +8,10 @@ import { Logo } from "@/components/brand/logo";
 import { UserAvatar } from "@/components/user-avatar";
 import { LiveRefresh } from "@/components/live-refresh";
 import { ChatBubble } from "@/components/chat/chat-bubble";
+import { StatusHydrator } from "@/components/status-hydrator";
 import { NotificationBell, type NotificationItem } from "./notification-bell";
 import { navForRole, isNavActive } from "./nav";
-import { ROLE_LABELS, type Role } from "@/lib/constants";
+import { ROLE_LABELS, type Role, type StatusOverride } from "@/lib/constants";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -31,10 +32,12 @@ export interface ShellUser {
 export function AppShell({
   user,
   notifications,
+  statusSettings = [],
   children,
 }: {
   user: ShellUser;
   notifications: NotificationItem[];
+  statusSettings?: StatusOverride[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -95,6 +98,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-background">
+      <StatusHydrator settings={statusSettings} />
       <LiveRefresh />
       <ChatBubble me={{ id: user.id, name: user.name, role: user.role }} />
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-border bg-white lg:block">

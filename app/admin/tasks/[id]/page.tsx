@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTaskDetail } from "@/lib/detail";
 import { getCurrentUser } from "@/lib/session";
+import { getAddedStatuses, getContentTypes } from "@/lib/settings";
 import { TaskHeading } from "@/components/task/task-heading";
 import { GuideCard } from "@/components/task/guide-card";
 import { ContentCard } from "@/components/task/content-card";
@@ -20,7 +21,7 @@ export default async function AdminTaskDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [task, writers, designers, developers, customRows, me] = await Promise.all([
+  const [task, writers, designers, developers, addedStatuses, contentTypes, me] = await Promise.all([
     getTaskDetail(id),
     prisma.user.findMany({
       where: { role: "WRITER", active: true },
@@ -37,11 +38,11 @@ export default async function AdminTaskDetailPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
-    prisma.customStatus.findMany({ orderBy: [{ order: "asc" }, { createdAt: "asc" }] }),
+    getAddedStatuses(),
+    getContentTypes(),
     getCurrentUser(),
   ]);
   if (!task) notFound();
-  const customStatuses = customRows.map((c) => ({ key: c.key, label: c.label }));
 
   return (
     <div>
@@ -80,7 +81,8 @@ export default async function AdminTaskDetailPage({
             writers={writers}
             designers={designers}
             developers={developers}
-            customStatuses={customStatuses}
+            addedStatuses={addedStatuses}
+            contentTypes={contentTypes}
             canDelete={me?.role === "ADMIN"}
           />
           <Card className="p-5">

@@ -20,8 +20,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const parsed = schema.safeParse(body);
   if (!parsed.success) return badRequest("Invalid status.");
   const to = parsed.data.status;
-  // Accept a built-in status or a Manager-defined custom one.
-  if (!isStatus(to) && !(await prisma.customStatus.findUnique({ where: { key: to } }))) {
+  // Accept a built-in status or a Manager-defined one.
+  if (!isStatus(to) && !(await prisma.statusSetting.findUnique({ where: { key: to } }))) {
     return badRequest("Invalid status.");
   }
 

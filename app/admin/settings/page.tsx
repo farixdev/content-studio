@@ -1,17 +1,20 @@
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { PageHeader } from "@/components/layout/page-header";
 import { SettingsView } from "@/components/admin/settings-view";
+import { getStatusesForSettings, getContentTypes, seedContentTypesIfEmpty } from "@/lib/settings";
 
 export default async function AdminSettingsPage() {
   await requireRole("ADMIN");
-  const rows = await prisma.customStatus.findMany({ orderBy: [{ order: "asc" }, { createdAt: "asc" }] });
-  const statuses = rows.map((r) => ({ id: r.id, label: r.label, color: r.color }));
+  await seedContentTypesIfEmpty();
+  const [statuses, contentTypes] = await Promise.all([getStatusesForSettings(), getContentTypes()]);
 
   return (
     <div>
-      <PageHeader title="Settings" description="Custom statuses and workspace options." />
-      <SettingsView initial={statuses} />
+      <PageHeader
+        title="Settings"
+        description="Rename or recolour any status, add your own, and manage content types."
+      />
+      <SettingsView statuses={statuses} contentTypes={contentTypes} />
     </div>
   );
 }

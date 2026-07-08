@@ -232,14 +232,24 @@ model ChatMessage {
   @@index([createdAt])
 }
 
-// Manager-defined extra statuses, layered on top of the built-in pipeline.
-// These are free-form labels the Manager can set manually; they don't drive the
-// automated role gates. `key` is what gets stored on Task.status.
-model CustomStatus {
+// Manager-managed statuses. A row either OVERRIDES a built-in pipeline status
+// (builtin=true, key = the built-in key, changes its label/colour only) or adds
+// a brand-new manually-settable status (builtin=false). `key` is what gets
+// stored on Task.status. `color` null = keep the built-in colour (relabel only).
+model StatusSetting {
   id        String   @id @default(cuid())
   key       String   @unique
   label     String
-  color     String   @default("slate") // slate | blue | violet | amber | emerald | rose | cyan | fuchsia
+  color     String? // slate | blue | violet | amber | emerald | rose | cyan | fuchsia
+  order     Int      @default(0)
+  builtin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// Manager-managed list of content types shown when creating/editing content.
+model ContentType {
+  id        String   @id @default(cuid())
+  name      String   @unique
   order     Int      @default(0)
   createdAt DateTime @default(now())
 }
