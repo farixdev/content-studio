@@ -71,3 +71,29 @@ export const REQUIRED_APPROVALS = 2;
 export function canOverrideStatus(role: Role): boolean {
   return role === "ADMIN";
 }
+
+// ---------------------------------------------------------------------------
+// Per-actor visibility ("chapter close")
+// ---------------------------------------------------------------------------
+// A worker's view closes at their own stage: once the piece moves downstream they
+// see their own endpoint (e.g. "Approved" / "Designed"), not the live status of a
+// stage that isn't theirs. Managers and reviewers always see the true status.
+const WRITER_DONE: Status[] = [
+  "DESIGN_NOW", "DESIGNING", "DESIGNED", "DESIGN_IMPROVEMENT",
+  "DEV_NOW", "DEVELOPING", "DEVELOPED", "POST_NOW", "POSTED", "SEO_OPTIMIZED",
+];
+const DESIGNER_DONE: Status[] = ["DEV_NOW", "DEVELOPING", "DEVELOPED", "POST_NOW", "POSTED", "SEO_OPTIMIZED"];
+const DEVELOPER_DONE: Status[] = ["POST_NOW", "POSTED", "SEO_OPTIMIZED"];
+
+export function roleViewStatus(role: string | undefined, status: string): string {
+  const s = status as Status;
+  if (role === "WRITER" && WRITER_DONE.includes(s)) return "REVIEWED_BY_WAQAR"; // "Approved"
+  if (role === "DESIGNER" && DESIGNER_DONE.includes(s)) return "DESIGNED";
+  if (role === "DEVELOPER" && DEVELOPER_DONE.includes(s)) return "DEVELOPED";
+  return status;
+}
+
+// Only managers and reviewers may see who wrote / designed / developed a piece.
+export function canSeeAttribution(role: string | undefined): boolean {
+  return role === "ADMIN" || role === "REVIEWER";
+}

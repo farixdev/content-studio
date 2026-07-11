@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Trash2,
   AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -255,6 +256,15 @@ export function TeamView({ users }: { users: Member[] }) {
                 </div>
               </div>
               <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <a
+                  href={`/admin/team/${m.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  title="Open profile in new tab"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
                 {m.active ? (
                   <Badge variant="success">Active</Badge>
                 ) : (

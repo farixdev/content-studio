@@ -22,7 +22,7 @@ export default async function ReviewerTaskPage({ params }: { params: Promise<{ i
 
   return (
     <div>
-      <TaskHeading task={task} backHref="/reviewer" backLabel="Back to queue" />
+      <TaskHeading task={task} backHref="/reviewer" backLabel="Back to queue" viewerRole="REVIEWER" />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <GuideCard guideText={task.guideText} guideFile={task.guideFile} />

@@ -76,7 +76,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const to = task.status === "IMPROVEMENT" ? "ISSUE_RESOLVED" : "WRITTEN";
   await prisma.task.update({
     where: { id },
-    data: { contentText, contentLink, contentFileId, words, status: to },
+    data: { contentText, contentLink, contentFileId, words, status: to, submittedAt: new Date() },
   });
   await prisma.reviewIssue.updateMany({ where: { taskId: id, resolved: false }, data: { resolved: true } });
   await recordStatus(id, task.status, to, user.id, "Submitted for review");

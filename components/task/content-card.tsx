@@ -2,6 +2,7 @@ import { FileText, Hash, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FileLink } from "./file-link";
 import { Linkify } from "@/components/linkify";
+import { externalHref } from "@/lib/utils";
 import type { FileRef } from "@/lib/detail";
 
 export function ContentCard({
@@ -39,7 +40,7 @@ export function ContentCard({
       ) : null}
       {contentLink && (
         <a
-          href={contentLink}
+          href={externalHref(contentLink)}
           target="_blank"
           rel="noreferrer"
           className="mt-3 inline-flex items-center gap-1.5 break-all text-sm font-medium text-primary hover:underline"

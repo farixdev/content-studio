@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TaskKanban } from "./task-kanban";
 import { STATUS_ORDER, statusMeta } from "@/lib/constants";
 import type { TaskListItem } from "@/lib/tasks";
-import { cn, formatDate, truncate } from "@/lib/utils";
+import { cn, formatDate, truncate, externalHref } from "@/lib/utils";
 import { toast } from "sonner";
 
 export function TasksView({
@@ -239,7 +239,7 @@ export function TasksView({
                     <td className="px-4 py-3">
                       {t.websiteLink ? (
                         <a
-                          href={t.websiteLink}
+                          href={externalHref(t.websiteLink)}
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}

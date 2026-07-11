@@ -46,6 +46,16 @@ export function truncate(text: string, max = 120): string {
   return text.slice(0, max).trimEnd() + "…";
 }
 
+/** Make any user-entered link safe to open externally. A bare "example.com" (no
+ * scheme) would otherwise be treated as a same-site relative path, so we prepend
+ * https://. Leaves http(s)/mailto/tel untouched. */
+export function externalHref(url: string): string {
+  const u = (url ?? "").trim();
+  if (!u) return "#";
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(u)) return u;
+  return "https://" + u.replace(/^\/+/, "");
+}
+
 /** Deterministic colour class from a string (for avatars). */
 export function colorFromString(str: string): string {
   const palette = [

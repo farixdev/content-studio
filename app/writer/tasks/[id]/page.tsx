@@ -23,7 +23,7 @@ export default async function WriterTaskPage({ params }: { params: Promise<{ id:
 
   return (
     <div>
-      <TaskHeading task={task} backHref="/writer" backLabel="Back to my work" />
+      <TaskHeading task={task} backHref="/writer" backLabel="Back to my work" viewerRole="WRITER" />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <GuideCard guideText={task.guideText} guideFile={task.guideFile} />
@@ -41,6 +41,7 @@ export default async function WriterTaskPage({ params }: { params: Promise<{ id:
           {editable ? (
             <WriterEditor
               taskId={task.id}
+              status={task.status}
               initialText={task.contentText}
               initialLink={task.contentLink}
               initialFile={task.contentFile}

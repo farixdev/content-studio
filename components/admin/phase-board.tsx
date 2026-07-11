@@ -15,7 +15,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { statusMeta } from "@/lib/constants";
 import type { TaskListItem } from "@/lib/tasks";
-import { formatDate } from "@/lib/utils";
+import { formatDate, externalHref } from "@/lib/utils";
 
 /** Small due-date pill that turns rose when a deadline has passed (for tasks
  * still in flight). */
@@ -139,7 +139,7 @@ export function PhaseBoard({
                       <td className="px-4 py-3">
                         {link ? (
                           <a
-                            href={link}
+                            href={externalHref(link)}
                             target="_blank"
                             rel="noreferrer"
                             onClick={(e) => e.stopPropagation()}
