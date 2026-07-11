@@ -1,4 +1,5 @@
 import { STATUS_ORDER } from "./constants";
+import { isFullyReviewed } from "./workflow";
 import type { TaskListItem } from "./tasks";
 
 const MONTHS = [
@@ -61,7 +62,9 @@ export function buildMonthGroups(items: TaskListItem[], since: Date): MonthGroup
 
   return months.map((mo) => {
     const monthItems = byMonth.get(mo.key) ?? [];
-    const words = monthItems.reduce((s, t) => s + (t.words || 0), 0);
+    // Only approved content counts toward the final word total (rejected/in-review
+    // work isn't final). Once approved it stays counted through design/publish.
+    const words = monthItems.reduce((s, t) => s + (isFullyReviewed(t.status) ? t.words || 0 : 0), 0);
     const counts = new Map<string, number>();
     for (const t of monthItems) counts.set(t.status, (counts.get(t.status) || 0) + 1);
     const statuses = [...counts.entries()]

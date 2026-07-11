@@ -1,6 +1,7 @@
 import { Code2, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Linkify } from "@/components/linkify";
+import { externalHref } from "@/lib/utils";
 
 export function DevCard({
   devInstructions,
@@ -34,7 +35,7 @@ export function DevCard({
             Built page
           </p>
           <a
-            href={devLink}
+            href={externalHref(devLink)}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 break-all text-sm font-medium text-primary hover:underline"

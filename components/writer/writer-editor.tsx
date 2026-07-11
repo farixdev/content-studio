@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Save, Loader2, Hash, Link2 } from "lucide-react";
+import { Send, Save, Loader2, Hash, Link2, PenLine } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +14,13 @@ import { toast } from "sonner";
 
 export function WriterEditor({
   taskId,
+  status,
   initialText,
   initialLink,
   initialFile,
 }: {
   taskId: string;
+  status: string;
   initialText: string | null;
   initialLink: string | null;
   initialFile: UploadedFile | null;
@@ -30,6 +32,30 @@ export function WriterEditor({
   const [busy, setBusy] = useState<string | null>(null);
   const words = countWords(text);
   const isGDoc = /docs\.google\.com\/document\//.test(link);
+  const notStarted = status === "ASSIGNED";
+
+  // Let the writer flag that they've started, so the manager/reviewer can see
+  // work is underway (moves ASSIGNED → In Progress).
+  async function start() {
+    setBusy("start");
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentText: text, contentLink: link || null, contentFileId: file?.id ?? null, draft: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) toast.error(data.error ?? "Something went wrong.");
+      else {
+        toast.success("Marked as writing — your manager can see you've started.");
+        router.refresh();
+      }
+    } catch {
+      toast.error("Something went wrong.");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function send(draft: boolean) {
     setBusy(draft ? "draft" : "submit");
@@ -92,7 +118,13 @@ export function WriterEditor({
       <div className="mt-3">
         <UploadField value={file} onChange={setFile} label="Attach content document (.docx, .pdf)" />
       </div>
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {notStarted && (
+          <Button variant="secondary" onClick={start} disabled={busy !== null}>
+            {busy === "start" ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
+            Start writing
+          </Button>
+        )}
         <Button
           onClick={() => send(false)}
           disabled={busy !== null || (!text.trim() && !link.trim() && !file)}

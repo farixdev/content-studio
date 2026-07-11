@@ -8,6 +8,7 @@ import {
   FolderKanban,
   Code2,
   Settings,
+  CalendarRange,
   type LucideIcon,
 } from "lucide-react";
 import { ROLE_HOME, type Role } from "@/lib/constants";
@@ -34,6 +35,7 @@ export function navForRole(role: Role): NavItem[] {
       return [
         { label: "My Work", href: "/writer", icon: PenLine },
         { label: "My Projects", href: "/writer/projects", icon: FolderKanban },
+        { label: "Monthly", href: "/writer/history", icon: CalendarRange },
       ];
     case "REVIEWER":
       return [

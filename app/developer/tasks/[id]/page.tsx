@@ -20,7 +20,7 @@ export default async function DeveloperTaskPage({ params }: { params: Promise<{ 
 
   return (
     <div>
-      <TaskHeading task={task} backHref="/developer" backLabel="Back to dev board" />
+      <TaskHeading task={task} backHref="/developer" backLabel="Back to dev board" viewerRole="DEVELOPER" />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <ContentCard contentText={task.contentText} contentLink={task.contentLink} contentFile={task.contentFile} words={task.words} />

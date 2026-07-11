@@ -46,7 +46,7 @@ export default async function AdminTaskDetailPage({
 
   return (
     <div>
-      <TaskHeading task={task} backHref="/admin/tasks" backLabel="Back to content" />
+      <TaskHeading task={task} backHref="/admin/tasks" backLabel="Back to content" viewerRole="ADMIN" />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <GuideCard guideText={task.guideText} guideFile={task.guideFile} />

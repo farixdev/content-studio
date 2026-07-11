@@ -2,6 +2,7 @@ import { Palette, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FileLink } from "./file-link";
 import { Linkify } from "@/components/linkify";
+import { externalHref } from "@/lib/utils";
 import type { FileRef } from "@/lib/detail";
 
 export function DesignCard({
@@ -36,7 +37,7 @@ export function DesignCard({
             Figma design
           </p>
           <a
-            href={figmaLink}
+            href={externalHref(figmaLink)}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"

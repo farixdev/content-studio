@@ -3,17 +3,22 @@ import { ArrowLeft, CalendarDays, CalendarClock, AlertTriangle } from "lucide-re
 import { StatusBadge } from "@/components/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { formatDate } from "@/lib/utils";
+import { roleViewStatus, canSeeAttribution } from "@/lib/workflow";
 import type { TaskDetail } from "@/lib/detail";
 
 export function TaskHeading({
   task,
   backHref,
   backLabel = "Back",
+  viewerRole,
 }: {
   task: TaskDetail;
   backHref: string;
   backLabel?: string;
+  viewerRole?: string;
 }) {
+  const shownStatus = roleViewStatus(viewerRole, task.status);
+  const showPeople = canSeeAttribution(viewerRole);
   return (
     <div className="mb-6">
       <Link
@@ -54,13 +59,21 @@ export function TaskHeading({
                 Due {formatDate(task.deadline)}
               </span>
             )}
-            {task.writer && (
+            {task.deadline &&
+              task.submittedAt &&
+              new Date(task.submittedAt).getTime() > new Date(task.deadline).getTime() && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-2 py-0.5 font-medium text-rose-700">
+                  <AlertTriangle className="h-4 w-4" />
+                  Submitted late · {formatDate(task.submittedAt, "MMM d, h:mm a")}
+                </span>
+              )}
+            {showPeople && task.writer && (
               <span className="inline-flex items-center gap-1.5">
                 <UserAvatar name={task.writer.name} className="h-5 w-5" />
                 {task.writer.name}
               </span>
             )}
-            {task.designer && (
+            {showPeople && task.designer && (
               <span className="inline-flex items-center gap-1.5">
                 <UserAvatar name={task.designer.name} className="h-5 w-5" />
                 {task.designer.name}
@@ -68,7 +81,7 @@ export function TaskHeading({
             )}
           </div>
         </div>
-        <StatusBadge status={task.status} className="shrink-0 px-3 py-1 text-sm" />
+        <StatusBadge status={shownStatus} className="shrink-0 px-3 py-1 text-sm" />
       </div>
     </div>
   );

@@ -71,6 +71,7 @@ model Task {
   contentFileId String?
   contentFile   Upload? @relation("ContentFile", fields: [contentFileId], references: [id])
   words         Int     @default(0)
+  submittedAt   DateTime?
 
   // Designer stage
   designerId         String?
