@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { apiUser, badRequest, forbidden, ok, unauthorized } from "@/lib/api";
-import { getConversation, markRead, canConverse, touchPresence } from "@/lib/chat";
+import { getConversation, markRead, getChatPolicy, canConverseWith, touchPresence } from "@/lib/chat";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ userId: string }> }) {
   const user = await apiUser();
@@ -12,7 +12,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ userId:
     select: { id: true, name: true, username: true, role: true, lastSeenAt: true },
   });
   if (!other) return badRequest("That person is unavailable.");
-  if (!canConverse(user.role, other.role)) return forbidden();
+  const policy = await getChatPolicy();
+  if (!canConverseWith(policy, user.role, other.role)) return forbidden();
 
   await touchPresence(user.id);
   const [messages] = await Promise.all([getConversation(user.id, other.id), markRead(user.id, other.id)]);

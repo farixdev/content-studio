@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MessagesSquare, Send, Loader2, X, Trash2, ChevronLeft, Search } from "lucide-react";
+import { MessagesSquare, Send, Loader2, X, Trash2, ChevronLeft, Search, Paperclip } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import { Linkify } from "@/components/linkify";
 import { ROLE_LABELS, ROLES, type Role } from "@/lib/constants";
@@ -14,6 +14,7 @@ interface Msg {
   authorId: string;
   authorName: string;
   authorRole: string;
+  file: { id: string; name: string } | null;
   createdAt: string;
 }
 interface Contact {
@@ -34,12 +35,40 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState("");
+  const [pendingFile, setPendingFile] = useState<{ id: string; name: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const activeRef = useRef<Contact | null>(null);
   activeRef.current = active;
   const mutating = useRef(0); // in-flight send/delete count — pauses poll reconcile
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const CHAT_FILE_MAX = 1024 * 1024; // 1 MB
+
+  async function attach(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!file) return;
+    if (file.size > CHAT_FILE_MAX) {
+      toast.error("Attachments must be under 1 MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/uploads", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) toast.error(data.error ?? "Upload failed.");
+      else setPendingFile({ id: data.id, name: data.originalName });
+    } catch {
+      toast.error("Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   // Poll the contact list (unread + presence) continuously — doubles as the
   // presence heartbeat and keeps the bubble's unread badge live.
@@ -119,14 +148,14 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
 
   async function send() {
     const body = text.trim();
-    if (!body || !active) return;
+    if ((!body && !pendingFile) || !active) return;
     setSending(true);
     mutating.current += 1;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipientId: active.id, body }),
+        body: JSON.stringify({ recipientId: active.id, body, fileId: pendingFile?.id ?? null }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -135,6 +164,7 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
       }
       setMessages((prev) => (prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message]));
       setText("");
+      setPendingFile(null);
     } catch {
       toast.error("Could not send.");
     } finally {
@@ -318,14 +348,32 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
                               </button>
                             )}
                           </div>
-                          <div
-                            className={cn(
-                              "inline-block whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 text-sm",
-                              mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                            )}
-                          >
-                            <Linkify text={m.body} />
-                          </div>
+                          {m.body && (
+                            <div
+                              className={cn(
+                                "inline-block whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 text-sm",
+                                mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                              )}
+                            >
+                              <Linkify text={m.body} />
+                            </div>
+                          )}
+                          {m.file && (
+                            <a
+                              href={`/api/uploads/${m.file.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={cn(
+                                "mt-1 inline-flex max-w-full items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium",
+                                mine
+                                  ? "border-primary-200 bg-primary-50 text-primary-700"
+                                  : "border-border bg-white text-foreground"
+                              )}
+                            >
+                              <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{m.file.name}</span>
+                            </a>
+                          )}
                         </div>
                       </div>
                     );
@@ -335,7 +383,31 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
               </div>
               {/* Composer */}
               <div className="border-t border-border p-2.5">
+                {pendingFile && (
+                  <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 text-xs">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span className="truncate">{pendingFile.name}</span>
+                    </span>
+                    <button
+                      onClick={() => setPendingFile(null)}
+                      className="shrink-0 text-muted-foreground hover:text-foreground"
+                      aria-label="Remove attachment"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-end gap-2">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground transition hover:bg-muted disabled:opacity-50"
+                    aria-label="Attach file"
+                    title="Attach a file (max 1 MB)"
+                  >
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                  </button>
                   <textarea
                     ref={inputRef}
                     value={text}
@@ -352,13 +424,14 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
                   />
                   <button
                     onClick={send}
-                    disabled={sending || !text.trim()}
+                    disabled={sending || (!text.trim() && !pendingFile)}
                     className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition disabled:opacity-50"
                     aria-label="Send"
                   >
                     {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </button>
                 </div>
+                <input ref={fileInputRef} type="file" className="hidden" onChange={attach} />
               </div>
             </>
           )}
