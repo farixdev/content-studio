@@ -49,19 +49,35 @@ export function PhaseBoard({
   const [items, setItems] = useState(initial);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
+  const [person, setPerson] = useState("ALL");
   useEffect(() => setItems(initial), [initial]);
 
   const isDesign = kind === "design";
   const personLabel = isDesign ? "Designer" : "Developer";
+  const personOf = (t: TaskListItem) => (isDesign ? t.designerName : t.developerName);
+
+  const people = useMemo(() => {
+    const names = new Set<string>();
+    for (const t of initial) {
+      const n = isDesign ? t.designerName : t.developerName;
+      if (n) names.add(n);
+    }
+    return [...names].sort();
+  }, [initial, isDesign]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((t) => {
       if (status !== "ALL" && t.status !== status) return false;
+      if (person !== "ALL") {
+        const n = personOf(t);
+        if (person === "__UNASSIGNED__" ? n : n !== person) return false;
+      }
       if (q && !`${t.title} ${t.refCode}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [items, search, status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, search, status, person, isDesign]);
 
   return (
     <div>
@@ -84,6 +100,20 @@ export function PhaseBoard({
             {statuses.map((s) => (
               <SelectItem key={s} value={s}>
                 {statusMeta(s).label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={person} onValueChange={setPerson}>
+          <SelectTrigger className="w-[170px]">
+            <SelectValue placeholder={personLabel} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All {personLabel.toLowerCase()}s</SelectItem>
+            <SelectItem value="__UNASSIGNED__">Unassigned</SelectItem>
+            {people.map((p) => (
+              <SelectItem key={p} value={p}>
+                {p}
               </SelectItem>
             ))}
           </SelectContent>

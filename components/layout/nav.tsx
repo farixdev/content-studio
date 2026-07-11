@@ -45,9 +45,17 @@ export function navForRole(role: Role): NavItem[] {
         { label: "Design", href: "/admin/design", icon: Palette },
       ];
     case "DESIGNER":
-      return [{ label: "Design Board", href: "/designer", icon: Palette }];
+      return [
+        { label: "Design Board", href: "/designer", icon: Palette },
+        { label: "My Projects", href: "/designer/projects", icon: FolderKanban },
+        { label: "Monthly", href: "/designer/history", icon: CalendarRange },
+      ];
     case "DEVELOPER":
-      return [{ label: "Dev Board", href: "/developer", icon: Code2 }];
+      return [
+        { label: "Dev Board", href: "/developer", icon: Code2 },
+        { label: "My Projects", href: "/developer/projects", icon: FolderKanban },
+        { label: "Monthly", href: "/developer/history", icon: CalendarRange },
+      ];
     default:
       return [];
   }
