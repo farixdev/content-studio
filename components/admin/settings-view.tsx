@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2, Trash2, RotateCcw, Check, Tags, FileType2 } from "lucide-react";
+import { Plus, Loader2, Trash2, RotateCcw, Check, Tags, FileType2, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import {
   STATUS_COLOR_NAMES,
   applyStatusSettings,
   previewStatus,
+  ROLES,
+  ROLE_LABELS,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -144,13 +146,16 @@ function StatusRow({ status, onChanged }: { status: SettingsStatus; onChanged: (
 export function SettingsView({
   statuses: initialStatuses,
   contentTypes: initialTypes,
+  chatPolicy,
 }: {
   statuses: SettingsStatus[];
   contentTypes: string[];
+  chatPolicy: Record<string, string[]>;
 }) {
   const router = useRouter();
   const [statuses, setStatuses] = useState(initialStatuses);
   const [types, setTypes] = useState(initialTypes);
+  const [policy, setPolicy] = useState(chatPolicy);
 
   // New-status form
   const [newLabel, setNewLabel] = useState("");
@@ -159,9 +164,39 @@ export function SettingsView({
   // New content-type form
   const [newType, setNewType] = useState("");
   const [typeBusy, setTypeBusy] = useState<string | null>(null);
+  const [chatBusy, setChatBusy] = useState<string | null>(null);
 
   useEffect(() => setStatuses(initialStatuses), [initialStatuses]);
   useEffect(() => setTypes(initialTypes), [initialTypes]);
+  useEffect(() => setPolicy(chatPolicy), [chatPolicy]);
+
+  async function toggleChat(fromRole: string, toRole: string) {
+    const current = policy[fromRole] ?? [];
+    const next = current.includes(toRole)
+      ? current.filter((r) => r !== toRole)
+      : [...current, toRole];
+    setPolicy((p) => ({ ...p, [fromRole]: next })); // optimistic
+    setChatBusy(`${fromRole}:${toRole}`);
+    try {
+      const res = await fetch("/api/settings/chat-permissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromRole, toRoles: next }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error ?? "Could not update.");
+        setPolicy((p) => ({ ...p, [fromRole]: current }));
+      } else {
+        router.refresh();
+      }
+    } catch {
+      toast.error("Could not update.");
+      setPolicy((p) => ({ ...p, [fromRole]: current }));
+    } finally {
+      setChatBusy(null);
+    }
+  }
 
   // Keep the client status registry in sync with what's shown, so every badge
   // across the app reflects edits live (without a full reload).
@@ -328,6 +363,53 @@ export function SettingsView({
             {typeBusy === newType.trim() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Add
           </Button>
+        </div>
+      </Card>
+
+      {/* Chat permissions */}
+      <Card className="p-6">
+        <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <MessageSquare className="h-4 w-4 text-primary" />
+          Chat permissions
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Pick who each role is allowed to message. If either side is allowed, they can chat both
+          ways. (By default only Managers &amp; Reviewers can talk to everyone.)
+        </p>
+        <div className="space-y-3">
+          {ROLES.map((from) => (
+            <div key={from} className="rounded-xl border border-border p-3">
+              <div className="mb-2 text-sm font-medium text-foreground">
+                {ROLE_LABELS[from]} can message:
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {ROLES.filter((r) => r !== from).map((to) => {
+                  const on = (policy[from] ?? []).includes(to);
+                  const key = `${from}:${to}`;
+                  return (
+                    <button
+                      key={to}
+                      onClick={() => toggleChat(from, to)}
+                      disabled={chatBusy === key}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition",
+                        on
+                          ? "bg-primary text-primary-foreground ring-primary"
+                          : "bg-muted text-muted-foreground ring-border hover:bg-muted/70"
+                      )}
+                    >
+                      {chatBusy === key ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : on ? (
+                        <Check className="h-3 w-3" />
+                      ) : null}
+                      {ROLE_LABELS[to]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
     </div>

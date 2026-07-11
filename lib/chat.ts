@@ -6,6 +6,7 @@ export interface ChatMsg {
   authorId: string;
   authorName: string;
   authorRole: string;
+  file: { id: string; name: string } | null;
   createdAt: string;
 }
 
@@ -15,6 +16,7 @@ type Row = {
   authorId: string;
   createdAt: Date;
   author: { name: string; role: string };
+  file: { id: string; originalName: string } | null;
 };
 
 function serialize(m: Row): ChatMsg {
@@ -24,26 +26,55 @@ function serialize(m: Row): ChatMsg {
     authorId: m.authorId,
     authorName: m.author.name,
     authorRole: m.author.role,
+    file: m.file ? { id: m.file.id, name: m.file.originalName } : null,
     createdAt: m.createdAt.toISOString(),
   };
 }
 
-const AUTHOR = { author: { select: { name: true, role: true } } } as const;
+const INCLUDE = {
+  author: { select: { name: true, role: true } },
+  file: { select: { id: true, originalName: true } },
+} as const;
 
 // ---------------------------------------------------------------------------
-// Who may message whom
+// Who may message whom — Manager-configurable policy
 // ---------------------------------------------------------------------------
-// Managers (ADMIN) and Reviewers are "staff": they can message anyone. Writers,
-// Designers and Developers can ONLY message staff — never each other.
-const STAFF_ROLES = ["ADMIN", "REVIEWER"];
+export type ChatPolicy = Record<string, string[]>;
 
-export function isStaffRole(role: string): boolean {
-  return STAFF_ROLES.includes(role);
+// Default: Writers/Designers/Developers can only reach Manager/Reviewer; staff
+// can reach everyone. Managers change this in Settings.
+export const DEFAULT_CHAT_POLICY: ChatPolicy = {
+  ADMIN: ["WRITER", "REVIEWER", "DESIGNER", "DEVELOPER"],
+  REVIEWER: ["WRITER", "DESIGNER", "DEVELOPER", "ADMIN"],
+  WRITER: ["ADMIN", "REVIEWER"],
+  DESIGNER: ["ADMIN", "REVIEWER"],
+  DEVELOPER: ["ADMIN", "REVIEWER"],
+};
+
+/** The current chat policy, merging any Manager overrides over the defaults. */
+export async function getChatPolicy(): Promise<ChatPolicy> {
+  try {
+    const rows = await prisma.chatPermission.findMany();
+    if (!rows.length) return DEFAULT_CHAT_POLICY;
+    const p: ChatPolicy = { ...DEFAULT_CHAT_POLICY };
+    for (const r of rows) {
+      try {
+        const list = JSON.parse(r.toRoles);
+        if (Array.isArray(list)) p[r.fromRole] = list.map(String);
+      } catch {
+        /* keep default for this role */
+      }
+    }
+    return p;
+  } catch {
+    return DEFAULT_CHAT_POLICY;
+  }
 }
 
-/** A conversation between two roles is allowed iff at least one side is staff. */
-export function canConverse(roleA: string, roleB: string): boolean {
-  return isStaffRole(roleA) || isStaffRole(roleB);
+/** A conversation is allowed if either side is permitted to message the other,
+ * so a reply is always possible once someone may reach out. */
+export function canConverseWith(policy: ChatPolicy, a: string, b: string): boolean {
+  return (policy[a] ?? []).includes(b) || (policy[b] ?? []).includes(a);
 }
 
 // ---------------------------------------------------------------------------
@@ -62,13 +93,10 @@ export interface Contact {
 const ONLINE_MS = 3 * 60 * 1000;
 
 export async function getContacts(me: { id: string; role: string }): Promise<Contact[]> {
-  const where = isStaffRole(me.role)
-    ? { active: true, id: { not: me.id } } // staff can reach everyone
-    : { active: true, role: { in: STAFF_ROLES } }; // workers can only reach staff
-
-  const [users, unreadRows] = await Promise.all([
+  const [policy, users, unreadRows] = await Promise.all([
+    getChatPolicy(),
     prisma.user.findMany({
-      where,
+      where: { active: true, id: { not: me.id } },
       orderBy: [{ role: "asc" }, { name: "asc" }],
       select: { id: true, name: true, username: true, role: true, lastSeenAt: true },
     }),
@@ -81,14 +109,16 @@ export async function getContacts(me: { id: string; role: string }): Promise<Con
 
   const unread = new Map(unreadRows.map((r) => [r.authorId, r._count._all]));
   const now = Date.now();
-  return users.map((u) => ({
-    id: u.id,
-    name: u.name,
-    username: u.username,
-    role: u.role,
-    online: !!u.lastSeenAt && now - u.lastSeenAt.getTime() < ONLINE_MS,
-    unread: unread.get(u.id) ?? 0,
-  }));
+  return users
+    .filter((u) => canConverseWith(policy, me.role, u.role))
+    .map((u) => ({
+      id: u.id,
+      name: u.name,
+      username: u.username,
+      role: u.role,
+      online: !!u.lastSeenAt && now - u.lastSeenAt.getTime() < ONLINE_MS,
+      unread: unread.get(u.id) ?? 0,
+    }));
 }
 
 // ---------------------------------------------------------------------------
@@ -108,7 +138,7 @@ export async function getConversation(
     },
     orderBy: { createdAt: "desc" },
     take: limit,
-    include: AUTHOR,
+    include: INCLUDE,
   });
   return rows.reverse().map(serialize);
 }

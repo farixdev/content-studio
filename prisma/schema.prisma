@@ -168,6 +168,7 @@ model Upload {
   contentFor Task[]        @relation("ContentFile")
   designFor  Task[]        @relation("DesignAsset")
   issues     ReviewIssue[] @relation("IssueFile")
+  chatFor    ChatMessage[] @relation("ChatFile")
 }
 
 model Notification {
@@ -236,12 +237,22 @@ model ChatMessage {
   recipientId String?
   recipient   User?     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
   body        String
+  fileId      String?
+  file        Upload?   @relation("ChatFile", fields: [fileId], references: [id])
   readAt      DateTime?
   createdAt   DateTime  @default(now())
 
   @@index([authorId, recipientId, createdAt])
   @@index([recipientId, readAt])
   @@index([createdAt])
+}
+
+// Manager-configurable chat policy: for each role (fromRole), the JSON array of
+// role keys that role is allowed to message. Missing rows fall back to the
+// built-in default (workers ↔ Manager/Reviewer only).
+model ChatPermission {
+  fromRole String @id
+  toRoles  String // JSON array of role keys, e.g. ["ADMIN","REVIEWER"]
 }
 
 // Manager-managed statuses. A row either OVERRIDES a built-in pipeline status
