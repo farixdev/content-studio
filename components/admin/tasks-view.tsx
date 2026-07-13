@@ -4,13 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, LayoutGrid, Table2, ExternalLink, ArrowUpRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TaskKanban } from "./task-kanban";
@@ -100,61 +94,53 @@ export function TasksView({
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All statuses</SelectItem>
-              {STATUS_ORDER.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {statusMeta(s).label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={status}
+            onChange={setStatus}
+            className="w-[160px]"
+            placeholder="Status"
+            searchPlaceholder="Search status…"
+            options={[
+              { value: "ALL", label: "All statuses" },
+              ...STATUS_ORDER.map((s) => ({ value: s, label: statusMeta(s).label })),
+            ]}
+          />
           {!hideProject && (
-            <Select value={project} onValueChange={setProject}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Project" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All projects</SelectItem>
-                {projects.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={project}
+              onChange={setProject}
+              className="w-[150px]"
+              placeholder="Project"
+              searchPlaceholder="Search projects…"
+              options={[
+                { value: "ALL", label: "All projects" },
+                ...projects.map((p) => ({ value: p.id, label: p.name })),
+              ]}
+            />
           )}
-          <Select value={type} onValueChange={setType}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All types</SelectItem>
-              {types.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={writer} onValueChange={setWriter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Writer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All writers</SelectItem>
-              <SelectItem value="__UNASSIGNED__">Unassigned</SelectItem>
-              {writers.map((w) => (
-                <SelectItem key={w} value={w}>
-                  {w}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={type}
+            onChange={setType}
+            className="w-[150px]"
+            placeholder="Type"
+            searchPlaceholder="Search types…"
+            options={[
+              { value: "ALL", label: "All types" },
+              ...types.map((t) => ({ value: t, label: t })),
+            ]}
+          />
+          <SearchableSelect
+            value={writer}
+            onChange={setWriter}
+            className="w-[150px]"
+            placeholder="Writer"
+            searchPlaceholder="Search writers…"
+            options={[
+              { value: "ALL", label: "All writers" },
+              { value: "__UNASSIGNED__", label: "Unassigned" },
+              ...writers.map((w) => ({ value: w, label: w })),
+            ]}
+          />
           <div className="flex items-center rounded-lg border border-border bg-white p-0.5">
             <button
               onClick={() => setView("table")}
