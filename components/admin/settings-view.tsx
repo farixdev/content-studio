@@ -238,7 +238,11 @@ export function SettingsView({
       const d = await res.json().catch(() => ({}));
       if (!res.ok) toast.error(d.error ?? "Could not update.");
       else {
-        if (action === "add") setNewType("");
+        if (action === "add") {
+          setNewType("");
+          const n = d.added ?? 1;
+          toast.success(`Added ${n} content type${n === 1 ? "" : "s"}.`);
+        }
         router.refresh();
       }
     } catch {
@@ -323,7 +327,8 @@ export function SettingsView({
           Content types
         </div>
         <p className="mb-4 text-xs text-muted-foreground">
-          The options shown when creating or editing a piece of content.
+          The options shown when creating or editing a piece of content. Add several at once by
+          separating them with commas.
         </p>
         <div className="mb-4 flex flex-wrap gap-2">
           {types.map((t) => (
@@ -346,11 +351,11 @@ export function SettingsView({
         </div>
         <div className="flex items-end gap-2">
           <div className="flex-1 space-y-1.5">
-            <Label className="text-xs">Add a content type</Label>
+            <Label className="text-xs">Add content types</Label>
             <Input
               value={newType}
               onChange={(e) => setNewType(e.target.value)}
-              placeholder="e.g. Newsletter"
+              placeholder="e.g. Newsletter, Case Study, Email"
               className="h-9"
               onKeyDown={(e) => e.key === "Enter" && newType.trim() && changeType("add", newType.trim())}
             />
