@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FolderKanban, Plus, Globe, FileText, Users, Loader2, Pencil, Trash2 } from "lucide-react";
+import { FolderKanban, Plus, Globe, FileText, Users, Loader2, Pencil, Trash2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +51,13 @@ export function ProjectsView({
   // Delete
   const [deleting, setDeleting] = useState<ProjectListItem | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+
+  // Search
+  const [q, setQ] = useState("");
+  const query = q.trim().toLowerCase();
+  const filtered = query
+    ? initial.filter((p) => `${p.name} ${p.website ?? ""} ${p.description ?? ""}`.toLowerCase().includes(query))
+    : initial;
 
   async function create() {
     if (!name.trim()) return toast.error("Project name is required.");
@@ -134,7 +141,17 @@ export function ProjectsView({
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative sm:max-w-xs sm:flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search projects…"
+            className="pl-9"
+            aria-label="Search projects"
+          />
+        </div>
         <Button onClick={() => setAddOpen(true)}>
           <Plus className="h-4 w-4" /> New project
         </Button>
@@ -151,9 +168,11 @@ export function ProjectsView({
             </Button>
           }
         />
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={Search} title="No matches" description="Try a different search term." />
       ) : (
         <ul className="grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
-          {initial.map((p) => (
+          {filtered.map((p) => (
             <li
               key={p.id}
               className="group relative rounded-2xl border border-border bg-card p-5 shadow-card transition hover:border-primary-100 hover:shadow-elevated"

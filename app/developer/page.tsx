@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { toListItem } from "@/lib/tasks";
 import { PageHeader } from "@/components/layout/page-header";
-import { TaskGroup } from "@/components/task/task-group";
+import { SearchableTaskGroups } from "@/components/task/searchable-task-groups";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 
@@ -47,11 +47,7 @@ export default async function DeveloperHome() {
             <StatCard label="Building" value={pick(["DEVELOPING"]).length} icon={Loader} tone="violet" />
             <StatCard label="Delivered" value={pick(delivered).length} icon={Rocket} tone="emerald" />
           </div>
-          {groups
-            .filter((g) => g.tasks.length > 0)
-            .map((g) => (
-              <TaskGroup key={g.title} title={g.title} tasks={g.tasks} hrefBase="/developer/tasks" />
-            ))}
+          <SearchableTaskGroups groups={groups} hrefBase="/developer/tasks" />
         </>
       )}
     </div>
