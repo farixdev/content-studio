@@ -8,7 +8,11 @@ export default async function ProjectsPage() {
   return (
     <div>
       <PageHeader title="Projects" description="Every website or brand you produce content for." />
-      <ProjectsView initial={projects} canDelete={me?.role === "ADMIN"} />
+      <ProjectsView
+        initial={projects}
+        canCreate={me?.role === "ADMIN"}
+        canDelete={me?.role === "ADMIN"}
+      />
     </div>
   );
 }
