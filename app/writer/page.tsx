@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/session";
 import { toListItem } from "@/lib/tasks";
 import { isFullyReviewed } from "@/lib/workflow";
 import { PageHeader } from "@/components/layout/page-header";
-import { TaskGroup } from "@/components/task/task-group";
+import { SearchableTaskGroups } from "@/components/task/searchable-task-groups";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 
@@ -58,9 +58,7 @@ export default async function WriterHome() {
           description="When your manager assigns you content, it will show up here."
         />
       ) : (
-        groups.map((g) => (
-          <TaskGroup key={g.title} title={g.title} tasks={g.tasks} hrefBase="/writer/tasks" />
-        ))
+        <SearchableTaskGroups groups={groups} hrefBase="/writer/tasks" />
       )}
     </div>
   );
