@@ -27,9 +27,11 @@ function host(url: string) {
 
 export function ProjectsView({
   initial,
+  canCreate = false,
   canDelete = false,
 }: {
   initial: ProjectListItem[];
+  canCreate?: boolean;
   canDelete?: boolean;
 }) {
   const router = useRouter();
@@ -152,20 +154,28 @@ export function ProjectsView({
             aria-label="Search projects"
           />
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="h-4 w-4" /> New project
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4" /> New project
+          </Button>
+        )}
       </div>
 
       {initial.length === 0 ? (
         <EmptyState
           icon={FolderKanban}
           title="No projects yet"
-          description="Create a project (a website or brand) — then create content inside it and assign writers."
+          description={
+            canCreate
+              ? "Create a project (a website or brand) — then create content inside it and assign writers."
+              : "Projects the Manager creates will appear here."
+          }
           action={
-            <Button onClick={() => setAddOpen(true)}>
-              <Plus className="h-4 w-4" /> New project
-            </Button>
+            canCreate ? (
+              <Button onClick={() => setAddOpen(true)}>
+                <Plus className="h-4 w-4" /> New project
+              </Button>
+            ) : undefined
           }
         />
       ) : filtered.length === 0 ? (

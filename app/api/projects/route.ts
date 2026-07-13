@@ -10,7 +10,8 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  const user = await apiUser(["ADMIN", "REVIEWER"]);
+  // Only the Manager may create projects (reviewers can work inside existing ones).
+  const user = await apiUser("ADMIN");
   if (!user) return unauthorized();
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
