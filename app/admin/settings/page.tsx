@@ -5,7 +5,7 @@ import { getStatusesForSettings, getContentTypes } from "@/lib/settings";
 import { getChatPolicy } from "@/lib/chat";
 
 export default async function AdminSettingsPage() {
-  await requireRole("ADMIN");
+  const me = await requireRole("ADMIN");
   // getContentTypes seeds the defaults once (marker-tracked) on first use.
   const [statuses, contentTypes, chatPolicy] = await Promise.all([
     getStatusesForSettings(),
@@ -17,9 +17,14 @@ export default async function AdminSettingsPage() {
     <div>
       <PageHeader
         title="Settings"
-        description="Rename or recolour any status, add your own, manage content types, and set who can chat."
+        description="Your account, statuses, content types, and who can chat."
       />
-      <SettingsView statuses={statuses} contentTypes={contentTypes} chatPolicy={chatPolicy} />
+      <SettingsView
+        statuses={statuses}
+        contentTypes={contentTypes}
+        chatPolicy={chatPolicy}
+        account={{ name: me.name, username: me.username }}
+      />
     </div>
   );
 }
