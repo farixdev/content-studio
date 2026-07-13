@@ -4,13 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ExternalLink, Palette, Code2, CalendarClock, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { statusMeta } from "@/lib/constants";
@@ -91,33 +85,29 @@ export function PhaseBoard({
             className="pl-9"
           />
         </div>
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Stage" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All stages</SelectItem>
-            {statuses.map((s) => (
-              <SelectItem key={s} value={s}>
-                {statusMeta(s).label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={person} onValueChange={setPerson}>
-          <SelectTrigger className="w-[170px]">
-            <SelectValue placeholder={personLabel} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All {personLabel.toLowerCase()}s</SelectItem>
-            <SelectItem value="__UNASSIGNED__">Unassigned</SelectItem>
-            {people.map((p) => (
-              <SelectItem key={p} value={p}>
-                {p}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={status}
+          onChange={setStatus}
+          className="w-[180px]"
+          placeholder="Stage"
+          searchPlaceholder="Search stages…"
+          options={[
+            { value: "ALL", label: "All stages" },
+            ...statuses.map((s) => ({ value: s, label: statusMeta(s).label })),
+          ]}
+        />
+        <SearchableSelect
+          value={person}
+          onChange={setPerson}
+          className="w-[170px]"
+          placeholder={personLabel}
+          searchPlaceholder={`Search ${personLabel.toLowerCase()}s…`}
+          options={[
+            { value: "ALL", label: `All ${personLabel.toLowerCase()}s` },
+            { value: "__UNASSIGNED__", label: "Unassigned" },
+            ...people.map((p) => ({ value: p, label: p })),
+          ]}
+        />
       </div>
 
       {filtered.length === 0 ? (
