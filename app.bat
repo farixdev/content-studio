@@ -5,7 +5,7 @@ echo ==========================
 echo Building project...
 echo ==========================
 
-cd /d "D:\content helper"
+cd /d "E:\Projects\content helper"
 
 call npm run build
 
@@ -19,7 +19,7 @@ if errorlevel 1 (
 echo.
 echo Starting server...
 
-start "" cmd /k "cd /d D:\content helper && npm start"
+start "" cmd /k "cd /d E:\Projects\content helper && npm start"
 
 timeout /t 5 /nobreak >nul
 
