@@ -81,7 +81,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   await prisma.reviewIssue.updateMany({ where: { taskId: id, resolved: false }, data: { resolved: true } });
   await recordStatus(id, task.status, to, user.id, "Submitted for review");
   await notifyAdmins("SUBMITTED", `${user.name} submitted: ${task.title}`, id);
-  await notifyReviewers("REVIEW", `Ready to review: ${task.title}`, id);
+  await notifyReviewers("REVIEW", `Ready to review: ${task.title}`, id, task.projectId);
 
   return ok({ id, status: to, words });
 }

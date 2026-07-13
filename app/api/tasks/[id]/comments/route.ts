@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { apiUser, badRequest, forbidden, notFound, ok, unauthorized } from "@/lib/api";
 import { canAccessTask, notifyAdmins, notifyUser } from "@/lib/tasks";
+import { canReviewerAccessProject } from "@/lib/projects";
 
 const schema = z.object({ body: z.string().min(1, "Write a comment") });
 
@@ -12,10 +13,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const task = await prisma.task.findUnique({
     where: { id },
-    select: { writerId: true, designerId: true, developerId: true },
+    select: { writerId: true, designerId: true, developerId: true, projectId: true },
   });
   if (!task) return notFound("Task not found.");
   if (!canAccessTask(user.role, user.id, task)) return forbidden();
+  if (user.role === "REVIEWER" && !(await canReviewerAccessProject(user.id, task.projectId))) {
+    return forbidden();
+  }
 
   const rows = await prisma.comment.findMany({
     where: { taskId: id },
@@ -41,6 +45,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return notFound("Task not found.");
   if (!canAccessTask(user.role, user.id, task)) return forbidden();
+  if (user.role === "REVIEWER" && !(await canReviewerAccessProject(user.id, task.projectId))) {
+    return forbidden();
+  }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return badRequest("Write a comment first.");

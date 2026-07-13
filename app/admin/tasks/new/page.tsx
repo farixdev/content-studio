@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/session";
+import { reviewerProjectIds } from "@/lib/projects";
 import { PageHeader } from "@/components/layout/page-header";
 import { CreateTaskForm } from "@/components/admin/create-task-form";
 import { getContentTypes } from "@/lib/settings";
@@ -11,6 +13,12 @@ export default async function NewTaskPage({
   searchParams: Promise<{ project?: string }>;
 }) {
   const sp = await searchParams;
+  const me = await getCurrentUser();
+  // Reviewers can only create content in the projects they're assigned to.
+  const projectWhere =
+    me?.role === "REVIEWER"
+      ? { status: "ACTIVE", id: { in: await reviewerProjectIds(me.id) } }
+      : { status: "ACTIVE" };
   const [writers, projects, contentTypes] = await Promise.all([
     prisma.user.findMany({
       where: { role: "WRITER", active: true },
@@ -18,7 +26,7 @@ export default async function NewTaskPage({
       select: { id: true, name: true },
     }),
     prisma.project.findMany({
-      where: { status: "ACTIVE" },
+      where: projectWhere,
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),

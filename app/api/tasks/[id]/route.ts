@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { apiUser, badRequest, notFound, ok, unauthorized } from "@/lib/api";
+import { apiUser, badRequest, forbidden, notFound, ok, unauthorized } from "@/lib/api";
 import { notifyUser } from "@/lib/tasks";
+import { canReviewerAccessProject } from "@/lib/projects";
 
 const schema = z.object({
   title: z.string().min(1).optional(),
@@ -24,6 +25,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const existing = await prisma.task.findUnique({ where: { id } });
   if (!existing) return notFound("Task not found.");
+  // Reviewers can only edit content in projects they're assigned to.
+  if (user.role === "REVIEWER" && !(await canReviewerAccessProject(user.id, existing.projectId))) {
+    return forbidden();
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
@@ -35,6 +40,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const project = await prisma.project.findUnique({ where: { id: d.projectId } });
     if (!project) return badRequest("That project no longer exists.");
     if (project.status === "ARCHIVED") return badRequest("That project is archived.");
+    if (user.role === "REVIEWER" && !(await canReviewerAccessProject(user.id, d.projectId))) {
+      return forbidden();
+    }
   }
 
   const task = await prisma.task.update({

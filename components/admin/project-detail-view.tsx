@@ -20,6 +20,7 @@ import {
   Hash,
   Trash2,
   AlertTriangle,
+  ClipboardCheck,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -224,6 +225,18 @@ export function ProjectDetailView({
           )}
           {project.description && (
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{project.description}</p>
+          )}
+          {members.some((m) => m.role === "REVIEWER") && (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+              <ClipboardCheck className="h-3.5 w-3.5 text-primary" />
+              <span className="font-medium text-foreground">
+                Reviewer{members.filter((m) => m.role === "REVIEWER").length > 1 ? "s" : ""}:
+              </span>{" "}
+              {members
+                .filter((m) => m.role === "REVIEWER")
+                .map((m) => m.name)
+                .join(", ")}
+            </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">

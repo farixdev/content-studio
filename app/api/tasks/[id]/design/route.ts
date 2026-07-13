@@ -51,6 +51,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   });
   await recordStatus(id, task.status, "DESIGNED", user.id, "Design submitted for approval");
   await notifyAdmins("DESIGNED", `Design ready to approve: ${task.title}`, id);
-  await notifyReviewers("DESIGNED", `Design ready to approve: ${task.title}`, id);
+  await notifyReviewers("DESIGNED", `Design ready to approve: ${task.title}`, id, task.projectId);
   return ok({ id, status: "DESIGNED" });
 }

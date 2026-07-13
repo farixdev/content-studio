@@ -10,6 +10,7 @@ export interface TaskDetail {
   refCode: string;
   title: string;
   contentType: string;
+  projectId: string | null;
   status: string;
   date: string;
   deadline: string | null;
@@ -86,6 +87,7 @@ export async function getTaskDetail(id: string): Promise<TaskDetail | null> {
     refCode: t.refCode,
     title: t.title,
     contentType: t.contentType,
+    projectId: t.projectId,
     status: t.status,
     date: t.date.toISOString(),
     deadline: t.deadline ? t.deadline.toISOString() : null,

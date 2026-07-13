@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { apiUser, badRequest, notFound, ok, unauthorized } from "@/lib/api";
+import { apiUser, badRequest, forbidden, notFound, ok, unauthorized } from "@/lib/api";
 import { recordStatus, notifyAdmins, notifyUser } from "@/lib/tasks";
+import { canReviewerAccessProject } from "@/lib/projects";
 import { isDesignReview } from "@/lib/workflow";
 
 const schema = z.object({
@@ -18,6 +19,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return notFound("Task not found.");
+  if (user.role === "REVIEWER" && !(await canReviewerAccessProject(user.id, task.projectId))) {
+    return forbidden();
+  }
   if (!isDesignReview(task.status)) return badRequest("This design isn't awaiting approval.");
 
   const parsed = schema.safeParse(await req.json().catch(() => null));

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
 import { getTaskDetail } from "@/lib/detail";
+import { canReviewerAccessProject } from "@/lib/projects";
 import { isReviewPhase } from "@/lib/workflow";
 import { TaskHeading } from "@/components/task/task-heading";
 import { GuideCard } from "@/components/task/guide-card";
@@ -14,9 +15,11 @@ import { Card } from "@/components/ui/card";
 
 export default async function ReviewerTaskPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await requireRole("REVIEWER");
+  const user = await requireRole("REVIEWER");
   const task = await getTaskDetail(id);
   if (!task) notFound();
+  // Reviewers can only open content in projects they're assigned to.
+  if (!(await canReviewerAccessProject(user.id, task.projectId))) notFound();
 
   const inReview = isReviewPhase(task.status);
 

@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { apiUser, badRequest, ok, unauthorized } from "@/lib/api";
+import { apiUser, badRequest, forbidden, ok, unauthorized } from "@/lib/api";
 import { nextRefCode, notifyUser, notifyAdmins } from "@/lib/tasks";
+import { canReviewerAccessProject } from "@/lib/projects";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -30,6 +31,10 @@ export async function POST(req: Request) {
   const project = await prisma.project.findUnique({ where: { id: d.projectId } });
   if (!project) return badRequest("That project no longer exists.");
   if (project.status === "ARCHIVED") return badRequest("That project is archived — reactivate it first.");
+  // A reviewer can only create content in a project they're assigned to.
+  if (user.role === "REVIEWER" && !(await canReviewerAccessProject(user.id, d.projectId))) {
+    return forbidden();
+  }
 
   // Retry on the rare refCode unique-collision from two concurrent creates.
   let created: { id: string; title: string; refCode: string } | null = null;

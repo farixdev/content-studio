@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/session";
+import { taskWhereForViewer } from "@/lib/projects";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { TasksView } from "@/components/admin/tasks-view";
@@ -12,7 +14,11 @@ export default async function AdminTasksPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const sp = await searchParams;
+  const me = await getCurrentUser();
+  // Reviewers only see content in the projects they're assigned to.
+  const where = me ? await taskWhereForViewer(me) : {};
   const tasks = await prisma.task.findMany({
+    where,
     include: { writer: { select: { name: true } }, designer: { select: { name: true } }, project: { select: { name: true } } },
     orderBy: { date: "desc" },
   });

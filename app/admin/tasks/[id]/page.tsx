@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTaskDetail } from "@/lib/detail";
 import { getCurrentUser } from "@/lib/session";
+import { canReviewerAccessProject } from "@/lib/projects";
 import { getAddedStatuses, getContentTypes } from "@/lib/settings";
 import { TaskHeading } from "@/components/task/task-heading";
 import { GuideCard } from "@/components/task/guide-card";
@@ -43,6 +44,8 @@ export default async function AdminTaskDetailPage({
     getCurrentUser(),
   ]);
   if (!task) notFound();
+  // Reviewers can only open content in projects they're assigned to.
+  if (me?.role === "REVIEWER" && !(await canReviewerAccessProject(me.id, task.projectId))) notFound();
 
   return (
     <div>

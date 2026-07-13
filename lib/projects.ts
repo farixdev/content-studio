@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { toListItem, type TaskListItem } from "./tasks";
 import type { Role } from "./constants";
@@ -39,8 +40,30 @@ const TASK_INCLUDE = {
   project: { select: { name: true } },
 };
 
-export async function getProjectsList(): Promise<ProjectListItem[]> {
+// Project ids a user is a member of. For reviewers this is the set of projects
+// they're allowed to see/act on (they no longer see every project).
+export async function reviewerProjectIds(userId: string): Promise<string[]> {
+  const rows = await prisma.projectMember.findMany({ where: { userId }, select: { projectId: true } });
+  return rows.map((r) => r.projectId);
+}
+
+/** Whether a reviewer is assigned to (a member of) the given project. */
+export async function canReviewerAccessProject(userId: string, projectId: string | null): Promise<boolean> {
+  if (!projectId) return false;
+  const m = await prisma.projectMember.findFirst({ where: { userId, projectId }, select: { id: true } });
+  return !!m;
+}
+
+/** A task `where` fragment scoping what a viewer may see: everyone but reviewers
+ * sees all; a reviewer sees only content in the projects they're assigned to. */
+export async function taskWhereForViewer(user: { id: string; role: string }): Promise<Prisma.TaskWhereInput> {
+  if (user.role !== "REVIEWER") return {};
+  return { projectId: { in: await reviewerProjectIds(user.id) } };
+}
+
+export async function getProjectsList(projectIds?: string[]): Promise<ProjectListItem[]> {
   const projects = await prisma.project.findMany({
+    where: projectIds ? { id: { in: projectIds } } : undefined,
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { tasks: true, members: true } } },
   });

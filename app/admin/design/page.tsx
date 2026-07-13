@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/session";
+import { taskWhereForViewer } from "@/lib/projects";
 import { PageHeader } from "@/components/layout/page-header";
 import { PhaseBoard } from "@/components/admin/phase-board";
 import { StatCard } from "@/components/ui/stat-card";
@@ -8,8 +10,10 @@ import { toListItem } from "@/lib/tasks";
 const DESIGN_STATUSES = ["REVIEWED_BY_WAQAR", "DESIGN_NOW", "DESIGNING", "DESIGN_IMPROVEMENT", "DESIGNED"];
 
 export default async function AdminDesignPage() {
+  const me = await getCurrentUser();
+  const scope = me ? await taskWhereForViewer(me) : {};
   const tasks = await prisma.task.findMany({
-    where: { status: { in: DESIGN_STATUSES } },
+    where: { status: { in: DESIGN_STATUSES }, ...scope },
     include: {
       writer: { select: { name: true } },
       designer: { select: { name: true } },

@@ -27,10 +27,12 @@ function host(url: string) {
 
 export function ProjectsView({
   initial,
+  reviewers = [],
   canCreate = false,
   canDelete = false,
 }: {
   initial: ProjectListItem[];
+  reviewers?: { id: string; name: string }[];
   canCreate?: boolean;
   canDelete?: boolean;
 }) {
@@ -41,6 +43,7 @@ export function ProjectsView({
   const [name, setName] = useState("");
   const [website, setWebsite] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedReviewers, setSelectedReviewers] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   // Edit
@@ -68,13 +71,19 @@ export function ProjectsView({
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, website: website || null, description: description || null }),
+        body: JSON.stringify({
+          name,
+          website: website || null,
+          description: description || null,
+          memberIds: selectedReviewers,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? "Could not create project.");
       } else {
         toast.success("Project created.");
+        setSelectedReviewers([]);
         router.refresh();
         router.push(`/admin/projects/${data.id}`);
       }
@@ -285,6 +294,38 @@ export function ProjectsView({
                 className="min-h-[80px]"
               />
             </div>
+            {reviewers.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Reviewers (optional)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Only the reviewers you pick here can see this project.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {reviewers.map((r) => {
+                    const on = selectedReviewers.includes(r.id);
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedReviewers((s) =>
+                            on ? s.filter((x) => x !== r.id) : [...s, r.id]
+                          )
+                        }
+                        className={
+                          "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition " +
+                          (on
+                            ? "bg-primary text-primary-foreground ring-primary"
+                            : "bg-muted text-muted-foreground ring-border hover:bg-muted/70")
+                        }
+                      >
+                        {r.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setAddOpen(false)}>

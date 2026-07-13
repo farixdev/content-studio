@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { apiUser, badRequest, notFound, ok, unauthorized } from "@/lib/api";
+import { apiUser, badRequest, forbidden, notFound, ok, unauthorized } from "@/lib/api";
+import { canReviewerAccessProject } from "@/lib/projects";
 
 const schema = z.object({
   name: z.string().min(1).optional(),
@@ -16,6 +17,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const existing = await prisma.project.findUnique({ where: { id } });
   if (!existing) return notFound("Project not found.");
+  // Reviewers may only edit/archive projects they're assigned to.
+  if (user.role === "REVIEWER" && !(await canReviewerAccessProject(user.id, id))) return forbidden();
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return badRequest("Invalid data.");

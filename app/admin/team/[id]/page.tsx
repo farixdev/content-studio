@@ -10,6 +10,8 @@ import { UserAvatar } from "@/components/user-avatar";
 import { MemberHistory } from "@/components/admin/member-history";
 import { toListItem } from "@/lib/tasks";
 import { buildMonthGroups } from "@/lib/history";
+import { getCurrentUser } from "@/lib/session";
+import { taskWhereForViewer } from "@/lib/projects";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 
@@ -37,9 +39,11 @@ export default async function MemberHistoryPage({
   const role = member.role as Role;
   const cfg = ROLE_CONFIG[role] ?? ROLE_CONFIG.WRITER;
 
+  // Reviewers only see this member's work in projects they're assigned to.
+  const me = await getCurrentUser();
+  const scope = me ? await taskWhereForViewer(me) : {};
   const where: Prisma.TaskWhereInput = {
-    ...cfg.where(id),
-    ...(sp.project ? { projectId: sp.project } : {}),
+    AND: [cfg.where(id), sp.project ? { projectId: sp.project } : {}, scope],
   };
 
   const [tasks, project] = await Promise.all([

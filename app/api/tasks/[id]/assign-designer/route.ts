@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { apiUser, badRequest, notFound, ok, unauthorized } from "@/lib/api";
+import { apiUser, badRequest, forbidden, notFound, ok, unauthorized } from "@/lib/api";
 import { recordStatus, notifyUser } from "@/lib/tasks";
+import { canReviewerAccessProject } from "@/lib/projects";
 
 const schema = z.object({
   designerId: z.string().min(1, "Pick a designer"),
@@ -15,6 +16,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return notFound("Task not found.");
+  if (user.role === "REVIEWER" && !(await canReviewerAccessProject(user.id, task.projectId))) {
+    return forbidden();
+  }
   // Design can only begin once content is fully reviewed, or when re-assigning a
   // task already in the design stage — never from writing/review or later phases.
   const designable = ["REVIEWED_BY_WAQAR", "DESIGN_NOW", "DESIGNING", "DESIGN_IMPROVEMENT", "DESIGNED"];

@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { apiUser, badRequest, notFound, ok, unauthorized } from "@/lib/api";
+import { apiUser, badRequest, forbidden, notFound, ok, unauthorized } from "@/lib/api";
 import { notifyUser } from "@/lib/tasks";
+import { canReviewerAccessProject } from "@/lib/projects";
 
 const schema = z.object({ userId: z.string().min(1) });
 
@@ -12,6 +13,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project) return notFound("Project not found.");
+  // A reviewer may only manage members of projects they're assigned to (this also
+  // prevents a reviewer from self-adding to a project to escalate their access).
+  if (admin.role === "REVIEWER" && !(await canReviewerAccessProject(admin.id, id))) return forbidden();
   if (project.status === "ARCHIVED") return badRequest("That project is archived — reactivate it first.");
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -44,6 +48,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const admin = await apiUser(["ADMIN", "REVIEWER"]);
   if (!admin) return unauthorized();
   const { id } = await params;
+
+  if (admin.role === "REVIEWER" && !(await canReviewerAccessProject(admin.id, id))) return forbidden();
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return badRequest("No member specified.");

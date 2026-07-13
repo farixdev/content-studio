@@ -16,8 +16,21 @@ export async function notifyAdmins(type: string, message: string, taskId: string
   });
 }
 
-export async function notifyReviewers(type: string, message: string, taskId: string | null = null) {
-  const reviewers = await prisma.user.findMany({ where: { role: "REVIEWER", active: true }, select: { id: true } });
+export async function notifyReviewers(
+  type: string,
+  message: string,
+  taskId: string | null = null,
+  projectId?: string | null
+) {
+  // Only notify reviewers assigned to the content's project (they can't see others).
+  const reviewers = await prisma.user.findMany({
+    where: {
+      role: "REVIEWER",
+      active: true,
+      ...(projectId ? { projectMemberships: { some: { projectId } } } : {}),
+    },
+    select: { id: true },
+  });
   if (reviewers.length === 0) return;
   await prisma.notification.createMany({
     data: reviewers.map((r) => ({ userId: r.id, type, message, taskId })),
