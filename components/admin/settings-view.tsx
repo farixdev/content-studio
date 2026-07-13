@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2, Trash2, RotateCcw, Check, Tags, FileType2, MessageSquare } from "lucide-react";
+import { Plus, Loader2, Trash2, RotateCcw, Check, Tags, FileType2, MessageSquare, UserCog } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,10 +147,12 @@ export function SettingsView({
   statuses: initialStatuses,
   contentTypes: initialTypes,
   chatPolicy,
+  account,
 }: {
   statuses: SettingsStatus[];
   contentTypes: string[];
   chatPolicy: Record<string, string[]>;
+  account: { name: string; username: string };
 }) {
   const router = useRouter();
   const [statuses, setStatuses] = useState(initialStatuses);
@@ -165,10 +167,48 @@ export function SettingsView({
   const [newType, setNewType] = useState("");
   const [typeBusy, setTypeBusy] = useState<string | null>(null);
   const [chatBusy, setChatBusy] = useState<string | null>(null);
+  // Your account
+  const [accName, setAccName] = useState(account.name);
+  const [accUsername, setAccUsername] = useState(account.username);
+  const [accCurPw, setAccCurPw] = useState("");
+  const [accNewPw, setAccNewPw] = useState("");
+  const [accBusy, setAccBusy] = useState(false);
 
   useEffect(() => setStatuses(initialStatuses), [initialStatuses]);
   useEffect(() => setTypes(initialTypes), [initialTypes]);
   useEffect(() => setPolicy(chatPolicy), [chatPolicy]);
+  useEffect(() => {
+    setAccName(account.name);
+    setAccUsername(account.username);
+  }, [account.name, account.username]);
+
+  async function saveAccount() {
+    if (!accName.trim()) return toast.error("Name can't be empty.");
+    if (accUsername.trim().length < 3) return toast.error("Username must be at least 3 characters.");
+    const body: Record<string, string> = { name: accName.trim(), username: accUsername.trim() };
+    if (accNewPw) body.newPassword = accNewPw;
+    if (accCurPw) body.currentPassword = accCurPw;
+    setAccBusy(true);
+    try {
+      const res = await fetch("/api/account", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) toast.error(d.error ?? "Could not save.");
+      else {
+        toast.success("Account updated.");
+        setAccCurPw("");
+        setAccNewPw("");
+        router.refresh();
+      }
+    } catch {
+      toast.error("Could not save.");
+    } finally {
+      setAccBusy(false);
+    }
+  }
 
   async function toggleChat(fromRole: string, toRole: string) {
     const current = policy[fromRole] ?? [];
@@ -257,6 +297,61 @@ export function SettingsView({
 
   return (
     <div className="max-w-3xl space-y-6">
+      {/* Your account */}
+      <Card className="p-6">
+        <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <UserCog className="h-4 w-4 text-primary" />
+          Your account
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Change your display name, login username, or password. Changing your username or password
+          needs your current password.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="acc-name">Name</Label>
+            <Input id="acc-name" value={accName} onChange={(e) => setAccName(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="acc-username">Username</Label>
+            <Input
+              id="acc-username"
+              value={accUsername}
+              onChange={(e) => setAccUsername(e.target.value)}
+              autoComplete="username"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="acc-newpw">New password</Label>
+            <Input
+              id="acc-newpw"
+              type="password"
+              value={accNewPw}
+              onChange={(e) => setAccNewPw(e.target.value)}
+              placeholder="Leave blank to keep current"
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="acc-curpw">Current password</Label>
+            <Input
+              id="acc-curpw"
+              type="password"
+              value={accCurPw}
+              onChange={(e) => setAccCurPw(e.target.value)}
+              placeholder="Needed to change username / password"
+              autoComplete="current-password"
+            />
+          </div>
+        </div>
+        <div className="mt-4">
+          <Button onClick={saveAccount} disabled={accBusy}>
+            {accBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Save account
+          </Button>
+        </div>
+      </Card>
+
       {/* Statuses */}
       <Card className="p-6">
         <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
