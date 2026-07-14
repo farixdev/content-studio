@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FolderKanban, Plus, Globe, FileText, Users, Loader2, Pencil, Trash2, Search } from "lucide-react";
+import { FolderKanban, Plus, Globe, FileText, Users, Loader2, Pencil, Trash2, Search, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -244,6 +244,15 @@ export function ProjectsView({
                 )}
                 {p.description && (
                   <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{p.description}</p>
+                )}
+                {p.reviewers.length > 0 && (
+                  <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <ClipboardCheck className="h-3 w-3 shrink-0 text-primary" />
+                    <span className="font-medium text-foreground">
+                      Reviewer{p.reviewers.length > 1 ? "s" : ""}:
+                    </span>
+                    <span className="truncate">{p.reviewers.join(", ")}</span>
+                  </p>
                 )}
                 <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">

@@ -19,6 +19,7 @@ export interface ProjectListItem {
   status: string;
   taskCount: number;
   memberCount: number;
+  reviewers: string[];
   createdAt: string;
 }
 
@@ -65,7 +66,13 @@ export async function getProjectsList(projectIds?: string[]): Promise<ProjectLis
   const projects = await prisma.project.findMany({
     where: projectIds ? { id: { in: projectIds } } : undefined,
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { tasks: true, members: true } } },
+    include: {
+      _count: { select: { tasks: true, members: true } },
+      members: {
+        where: { user: { role: "REVIEWER" } },
+        select: { user: { select: { name: true } } },
+      },
+    },
   });
   return projects.map((p) => ({
     id: p.id,
@@ -75,6 +82,7 @@ export async function getProjectsList(projectIds?: string[]): Promise<ProjectLis
     status: p.status,
     taskCount: p._count.tasks,
     memberCount: p._count.members,
+    reviewers: p.members.map((m) => m.user.name),
     createdAt: p.createdAt.toISOString(),
   }));
 }
