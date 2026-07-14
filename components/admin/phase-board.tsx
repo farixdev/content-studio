@@ -6,6 +6,7 @@ import { Search, ExternalLink, Palette, Code2, CalendarClock, AlertTriangle } fr
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { StatusBadge } from "@/components/status-badge";
+import { LateBadge } from "@/components/task/late-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { statusMeta } from "@/lib/constants";
 import type { TaskListItem } from "@/lib/tasks";
@@ -172,7 +173,10 @@ export function PhaseBoard({
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <StatusBadge status={t.status} />
+                        <div className="flex items-center gap-1.5">
+                          <StatusBadge status={t.status} />
+                          <LateBadge count={t.deadlineRollovers} />
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <Deadline iso={t.deadline} />

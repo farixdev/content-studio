@@ -50,6 +50,9 @@ model Task {
 
   date        DateTime @default(now())
   deadline    DateTime?
+  // How many times the due date rolled to the next month because the writer
+  // missed it while still owing the piece. > 0 means the content is "late".
+  deadlineRollovers Int @default(0)
   contentType String
   status      String   @default("ASSIGNED")
 

@@ -96,6 +96,7 @@ export interface TaskListItem {
   status: string;
   date: string;
   deadline: string | null;
+  deadlineRollovers: number;
   words: number;
   websiteLink: string | null;
   remarks: string | null;
@@ -119,6 +120,7 @@ type TaskWithPeople = {
   status: string;
   date: Date;
   deadline?: Date | null;
+  deadlineRollovers?: number;
   words: number;
   websiteLink: string | null;
   remarks: string | null;
@@ -155,6 +157,7 @@ export function toListItem(t: TaskWithPeople): TaskListItem {
     status: t.status,
     date: t.date.toISOString(),
     deadline: t.deadline ? t.deadline.toISOString() : null,
+    deadlineRollovers: t.deadlineRollovers ?? 0,
     words: t.words,
     websiteLink: t.websiteLink,
     remarks: t.remarks,

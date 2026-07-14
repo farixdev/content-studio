@@ -14,6 +14,7 @@ export interface TaskDetail {
   status: string;
   date: string;
   deadline: string | null;
+  deadlineRollovers: number;
   submittedAt: string | null;
   words: number;
   guideText: string | null;
@@ -91,6 +92,7 @@ export async function getTaskDetail(id: string): Promise<TaskDetail | null> {
     status: t.status,
     date: t.date.toISOString(),
     deadline: t.deadline ? t.deadline.toISOString() : null,
+    deadlineRollovers: t.deadlineRollovers,
     submittedAt: t.submittedAt ? t.submittedAt.toISOString() : null,
     words: t.words,
     guideText: t.guideText,

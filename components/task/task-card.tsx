@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Hash, FolderKanban, CalendarClock, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
+import { LateBadge } from "./late-badge";
 import { timeAgo, formatDate } from "@/lib/utils";
 import type { TaskListItem } from "@/lib/tasks";
 
@@ -28,6 +29,7 @@ export function TaskCard({ task, href }: { task: TaskListItem; href: string }) {
           </span>
         )}
         <span>{task.contentType}</span>
+        <LateBadge count={task.deadlineRollovers} />
         {task.words > 0 && (
           <span className="inline-flex items-center gap-0.5">
             <Hash className="h-3 w-3" />

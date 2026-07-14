@@ -6,6 +6,7 @@ import { Search, LayoutGrid, Table2, ExternalLink, ArrowUpRight } from "lucide-r
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { StatusBadge } from "@/components/status-badge";
+import { LateBadge } from "@/components/task/late-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TaskKanban } from "./task-kanban";
 import { STATUS_ORDER, statusMeta } from "@/lib/constants";
@@ -217,7 +218,10 @@ export function TasksView({
                       {t.writerName ?? <span className="text-muted-foreground">—</span>}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={t.status} />
+                      <div className="flex items-center gap-1.5">
+                        <StatusBadge status={t.status} />
+                        <LateBadge count={t.deadlineRollovers} />
+                      </div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-muted-foreground">
                       {t.words > 0 ? t.words.toLocaleString() : "—"}

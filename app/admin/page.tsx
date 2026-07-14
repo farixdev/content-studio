@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { statusMeta, PHASES, type Phase } from "@/lib/constants";
 import { cn, formatDate, timeAgo } from "@/lib/utils";
+import { maybeRolloverDeadlines } from "@/lib/deadlines";
 
 const PHASE_BAR: Record<Phase, string> = {
   Writing: "bg-sky-400",
@@ -20,6 +21,9 @@ const PHASE_BAR: Record<Phase, string> = {
 };
 
 export default async function AdminDashboard() {
+  // Roll any overdue writer deadlines to next month (throttled ~12h; a safety net
+  // in case the scheduled cron isn't running).
+  await maybeRolloverDeadlines();
   const [tasks, activity] = await Promise.all([
     prisma.task.findMany({ include: { writer: { select: { name: true } }, designer: { select: { name: true } }, project: { select: { name: true } } }, orderBy: { updatedAt: "desc" } }),
     prisma.statusHistory.findMany({

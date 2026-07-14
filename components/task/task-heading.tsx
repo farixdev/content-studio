@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, CalendarClock, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
+import { LateBadge } from "./late-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { formatDate } from "@/lib/utils";
 import { roleViewStatus, canSeeAttribution } from "@/lib/workflow";
@@ -59,6 +60,7 @@ export function TaskHeading({
                 Due {formatDate(task.deadline)}
               </span>
             )}
+            <LateBadge count={task.deadlineRollovers} className="px-2 py-0.5 text-xs" />
             {task.deadline &&
               task.submittedAt &&
               new Date(task.submittedAt).getTime() > new Date(task.deadline).getTime() && (
