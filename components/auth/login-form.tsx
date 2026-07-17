@@ -63,7 +63,7 @@ export function LoginForm() {
             value={password}
             autoComplete="current-password"
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
+
             className="pr-10"
           />
           <button
