@@ -9,6 +9,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { LiveRefresh } from "@/components/live-refresh";
 import { ChatBubble } from "@/components/chat/chat-bubble";
 import { StatusHydrator } from "@/components/status-hydrator";
+import { NotificationPopups } from "@/components/notifications/notification-popups";
 import { NotificationBell, type NotificationItem } from "./notification-bell";
 import { navForRole, isNavActive } from "./nav";
 import { ROLE_LABELS, type Role, type StatusOverride } from "@/lib/constants";
@@ -99,6 +100,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-background">
       <StatusHydrator settings={statusSettings} />
+      <NotificationPopups role={user.role} seenIds={notifications.map((n) => n.id)} />
       <LiveRefresh />
       <ChatBubble me={{ id: user.id, name: user.name, role: user.role }} />
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-border bg-white lg:block">
@@ -136,7 +138,7 @@ export function AppShell({
           <div className="flex-1">
             <h2 className="text-sm font-semibold text-foreground">{active?.label ?? "Overview"}</h2>
           </div>
-          <NotificationBell initial={notifications} />
+          <NotificationBell initial={notifications} role={user.role} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 rounded-lg p-1 pr-2 transition hover:bg-muted">

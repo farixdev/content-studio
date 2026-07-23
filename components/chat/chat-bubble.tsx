@@ -4,9 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { MessagesSquare, Send, Loader2, X, Trash2, ChevronLeft, Search, Paperclip } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import { Linkify } from "@/components/linkify";
-import { ROLE_LABELS, ROLES, type Role } from "@/lib/constants";
-import { cn, timeAgo } from "@/lib/utils";
+import { ROLE_LABELS, type Role } from "@/lib/constants";
+import { OPEN_CHAT_EVENT } from "@/lib/notify-link";
+import { cn, timeAgo, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
+
+/** Compact timestamp for the contact list: time today, date otherwise. */
+function shortTime(iso: string) {
+  const d = new Date(iso);
+  const sameDay = d.toDateString() === new Date().toDateString();
+  return sameDay ? formatDate(iso, "h:mm a") : formatDate(iso, "MMM d");
+}
 
 interface Msg {
   id: string;
@@ -24,6 +32,9 @@ interface Contact {
   role: string;
   online: boolean;
   unread: number;
+  lastMessage: string | null;
+  lastAt: string | null;
+  lastFromMe: boolean;
 }
 
 export function ChatBubble({ me }: { me: { id: string; name: string; role: string } }) {
@@ -40,6 +51,8 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
 
   const activeRef = useRef<Contact | null>(null);
   activeRef.current = active;
+  const contactsRef = useRef<Contact[]>([]);
+  contactsRef.current = contacts;
   const mutating = useRef(0); // in-flight send/delete count — pauses poll reconcile
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -86,7 +99,7 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
       }
     }
     pull();
-    const id = setInterval(pull, 10000);
+    const id = setInterval(pull, 6000);
     const onVis = () => document.visibilityState === "visible" && pull();
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("focus", onVis);
@@ -96,6 +109,33 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", onVis);
     };
+  }, []);
+
+  // Jump straight into a conversation when a notification (bell or popup) is clicked.
+  useEffect(() => {
+    async function onOpenChat(e: Event) {
+      const userId = (e as CustomEvent).detail?.userId as string | undefined;
+      if (!userId) return;
+      setOpen(true);
+      let target = contactsRef.current.find((c) => c.id === userId) ?? null;
+      if (!target) {
+        // First message from someone not in the cached list yet — refetch.
+        try {
+          const res = await fetch("/api/chat");
+          if (res.ok) {
+            const data = await res.json();
+            const list: Contact[] = data.contacts ?? [];
+            setContacts(list);
+            target = list.find((c) => c.id === userId) ?? null;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+      if (target) setActive(target);
+    }
+    window.addEventListener(OPEN_CHAT_EVENT, onOpenChat as EventListener);
+    return () => window.removeEventListener(OPEN_CHAT_EVENT, onOpenChat as EventListener);
   }, []);
 
   // Poll the open conversation.
@@ -132,7 +172,7 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
     setMsgsLoading(true);
     setMessages([]);
     pull();
-    const id = setInterval(pull, 7000);
+    const id = setInterval(pull, 4000);
     return () => {
       live = false;
       clearInterval(id);
@@ -202,15 +242,14 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
   const isAdmin = me.role === "ADMIN";
 
   const q = search.trim().toLowerCase();
+  // The server returns contacts newest-conversation-first; search only narrows.
   const filtered = q
-    ? contacts.filter((c) => `${c.name} ${ROLE_LABELS[c.role as Role] ?? c.role}`.toLowerCase().includes(q))
+    ? contacts.filter((c) =>
+        `${c.name} ${ROLE_LABELS[c.role as Role] ?? c.role} ${c.lastMessage ?? ""}`
+          .toLowerCase()
+          .includes(q)
+      )
     : contacts;
-  // Group contacts by designation, in role order.
-  const groups = ROLES.filter((r) => filtered.some((c) => c.role === r)).map((r) => ({
-    role: r,
-    label: ROLE_LABELS[r],
-    people: filtered.filter((c) => c.role === r),
-  }));
 
   return (
     <>
@@ -252,38 +291,66 @@ export function ChatBubble({ me }: { me: { id: string; name: string; role: strin
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                     No contacts available.
                   </div>
+                ) : filtered.length === 0 ? (
+                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                    No matches.
+                  </div>
                 ) : (
-                  groups.map((g) => (
-                    <div key={g.role} className="mb-2">
-                      <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        {g.label}
-                      </p>
-                      {g.people.map((c) => (
-                        <button
-                          key={c.id}
-                          onClick={() => setActive(c)}
-                          className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-muted"
-                        >
-                          <div className="relative">
-                            <UserAvatar name={c.name} className="h-9 w-9" />
-                            {c.online && (
-                              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
+                  filtered.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => {
+                        setContacts((cs) => cs.map((x) => (x.id === c.id ? { ...x, unread: 0 } : x)));
+                        setActive(c);
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-muted"
+                    >
+                      <div className="relative shrink-0">
+                        <UserAvatar name={c.name} className="h-10 w-10" />
+                        {c.online && (
+                          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-2">
+                          <span
+                            className={cn(
+                              "truncate text-sm text-foreground",
+                              c.unread > 0 ? "font-semibold" : "font-medium"
                             )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium text-foreground">{c.name}</div>
-                            <div className="truncate text-[11px] text-muted-foreground">
-                              {ROLE_LABELS[c.role as Role] ?? c.role}
-                            </div>
-                          </div>
+                          >
+                            {c.name}
+                          </span>
+                          {c.lastAt && (
+                            <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                              {shortTime(c.lastAt)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "truncate text-[11px]",
+                              c.unread > 0 ? "font-medium text-foreground" : "text-muted-foreground"
+                            )}
+                          >
+                            {c.lastMessage
+                              ? `${c.lastFromMe ? "You: " : ""}${c.lastMessage}`
+                              : ROLE_LABELS[c.role as Role] ?? c.role}
+                          </span>
                           {c.unread > 0 && (
-                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                            <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
                               {c.unread > 9 ? "9+" : c.unread}
                             </span>
                           )}
-                        </button>
-                      ))}
-                    </div>
+                        </div>
+                        {c.lastMessage && (
+                          <div className="truncate text-[10px] text-muted-foreground/70">
+                            {ROLE_LABELS[c.role as Role] ?? c.role}
+                          </div>
+                        )}
+                      </div>
+                    </button>
                   ))
                 )}
               </div>

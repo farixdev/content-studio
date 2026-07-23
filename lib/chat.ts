@@ -87,13 +87,17 @@ export interface Contact {
   role: string;
   online: boolean;
   unread: number;
+  /** Preview of the most recent message either way (for the contact list). */
+  lastMessage: string | null;
+  lastAt: string | null;
+  lastFromMe: boolean;
 }
 
 // Considered "online" if seen within this window.
 const ONLINE_MS = 3 * 60 * 1000;
 
 export async function getContacts(me: { id: string; role: string }): Promise<Contact[]> {
-  const [policy, users, unreadRows] = await Promise.all([
+  const [policy, users, unreadRows, recent] = await Promise.all([
     getChatPolicy(),
     prisma.user.findMany({
       where: { active: true, id: { not: me.id } },
@@ -105,20 +109,55 @@ export async function getContacts(me: { id: string; role: string }): Promise<Con
       where: { recipientId: me.id, readAt: null },
       _count: { _all: true },
     }),
+    // Recent traffic either way, newest first — used for the preview + ordering.
+    prisma.chatMessage.findMany({
+      where: { OR: [{ authorId: me.id }, { recipientId: me.id }] },
+      orderBy: { createdAt: "desc" },
+      take: 400,
+      select: { authorId: true, recipientId: true, body: true, fileId: true, createdAt: true },
+    }),
   ]);
+
+  // First hit per counterpart is their latest message.
+  const lastBy = new Map<string, { body: string; at: Date; fromMe: boolean; hasFile: boolean }>();
+  for (const m of recent) {
+    const other = m.authorId === me.id ? m.recipientId : m.authorId;
+    if (!other || lastBy.has(other)) continue;
+    lastBy.set(other, {
+      body: m.body,
+      at: m.createdAt,
+      fromMe: m.authorId === me.id,
+      hasFile: !!m.fileId,
+    });
+  }
 
   const unread = new Map(unreadRows.map((r) => [r.authorId, r._count._all]));
   const now = Date.now();
+
   return users
     .filter((u) => canConverseWith(policy, me.role, u.role))
-    .map((u) => ({
-      id: u.id,
-      name: u.name,
-      username: u.username,
-      role: u.role,
-      online: !!u.lastSeenAt && now - u.lastSeenAt.getTime() < ONLINE_MS,
-      unread: unread.get(u.id) ?? 0,
-    }));
+    .map((u) => {
+      const last = lastBy.get(u.id);
+      return {
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        role: u.role,
+        online: !!u.lastSeenAt && now - u.lastSeenAt.getTime() < ONLINE_MS,
+        unread: unread.get(u.id) ?? 0,
+        lastMessage: last ? (last.body || (last.hasFile ? "Attachment" : "")) || null : null,
+        lastAt: last ? last.at.toISOString() : null,
+        lastFromMe: last?.fromMe ?? false,
+      };
+    })
+    // Most recent conversation first; people you've never messaged fall to the
+    // bottom (kept in role/name order).
+    .sort((a, b) => {
+      if (a.lastAt && b.lastAt) return b.lastAt.localeCompare(a.lastAt);
+      if (a.lastAt) return -1;
+      if (b.lastAt) return 1;
+      return 0;
+    });
 }
 
 // ---------------------------------------------------------------------------

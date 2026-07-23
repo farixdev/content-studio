@@ -59,7 +59,9 @@ export async function POST(req: Request) {
     },
   });
 
-  await notifyUser(recipient.id, "CHAT", `${user.name} messaged you`, null);
+  // actorId = the sender, so the notification can deep-link to this conversation.
+  const preview = body ? (body.length > 60 ? `${body.slice(0, 60)}…` : body) : "sent an attachment";
+  await notifyUser(recipient.id, "CHAT", `${user.name}: ${preview}`, null, user.id);
 
   return ok({
     message: {

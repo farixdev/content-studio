@@ -15,6 +15,7 @@ export async function GET() {
       type: n.type,
       message: n.message,
       taskId: n.taskId,
+      actorId: n.actorId,
       read: n.read,
       createdAt: n.createdAt.toISOString(),
     })),

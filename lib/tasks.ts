@@ -4,8 +4,14 @@ import { prisma } from "./prisma";
 // Notifications
 // ---------------------------------------------------------------------------
 
-export async function notifyUser(userId: string, type: string, message: string, taskId: string | null = null) {
-  await prisma.notification.create({ data: { userId, type, message, taskId } });
+export async function notifyUser(
+  userId: string,
+  type: string,
+  message: string,
+  taskId: string | null = null,
+  actorId: string | null = null
+) {
+  await prisma.notification.create({ data: { userId, type, message, taskId, actorId } });
 }
 
 export async function notifyAdmins(type: string, message: string, taskId: string | null = null) {
@@ -48,6 +54,7 @@ export async function shellNotifications(userId: string) {
     type: n.type,
     message: n.message,
     taskId: n.taskId,
+    actorId: n.actorId,
     read: n.read,
     createdAt: n.createdAt.toISOString(),
   }));

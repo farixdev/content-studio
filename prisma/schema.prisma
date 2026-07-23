@@ -182,6 +182,9 @@ model Notification {
   message   String
   taskId    String?
   task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  // Who caused it (e.g. the chat sender) so the notification can deep-link to
+  // the right conversation. Plain id — no relation needed.
+  actorId   String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
