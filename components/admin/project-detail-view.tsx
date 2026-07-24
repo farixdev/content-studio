@@ -302,7 +302,7 @@ export function ProjectDetailView({
         <StatCard label="Content" value={project.stats.total} icon={FileText} tone="primary" />
         <StatCard label="Writers" value={project.stats.writers} icon={PenLine} tone="violet" />
         <StatCard label="Published" value={project.stats.published} icon={Rocket} tone="emerald" />
-        <StatCard label="Total words" value={project.stats.words.toLocaleString()} icon={Hash} tone="amber" />
+        <StatCard label="Approved words" value={project.stats.words.toLocaleString()} icon={Hash} tone="amber" />
       </div>
 
       {/* Tabs */}

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { toListItem, type TaskListItem } from "./tasks";
+import { approvedWords } from "./workflow";
 import type { Role } from "./constants";
 
 export interface ProjectMemberInfo {
@@ -102,7 +103,8 @@ export async function getProjectDetail(id: string): Promise<ProjectDetail | null
   const published = items.filter((t) => t.status === "POSTED" || t.status === "SEO_OPTIMIZED").length;
   const cancelled = items.filter((t) => t.status === "CANCELLED").length;
   const inProgress = total - published - cancelled;
-  const words = items.reduce((s, t) => s + (t.words || 0), 0);
+  // Approved content only — drafts and in-review pieces don't count.
+  const words = approvedWords(items);
 
   const members: ProjectMemberInfo[] = project.members.map((m) => ({
     id: m.user.id,

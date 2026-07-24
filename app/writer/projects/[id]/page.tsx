@@ -4,6 +4,7 @@ import { ArrowLeft, Globe, FileText, ClipboardCheck, Rocket, Hash } from "lucide
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { toListItem } from "@/lib/tasks";
+import { approvedWords } from "@/lib/workflow";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { WriterProjectWork } from "@/components/writer/project-work";
@@ -35,7 +36,8 @@ export default async function WriterProjectPage({ params }: { params: Promise<{ 
   const items = tasks.map(toListItem);
   const inReview = items.filter((t) => REVIEW_STATUSES.includes(t.status)).length;
   const published = items.filter((t) => t.status === "POSTED" || t.status === "SEO_OPTIMIZED").length;
-  const words = items.reduce((s, t) => s + (t.words || 0), 0);
+  // Approved content only — a draft in review isn't counted yet.
+  const words = approvedWords(items);
 
   return (
     <div>
@@ -68,7 +70,7 @@ export default async function WriterProjectPage({ params }: { params: Promise<{ 
           <StatCard label="My pieces" value={items.length} icon={FileText} tone="primary" />
           <StatCard label="In review" value={inReview} icon={ClipboardCheck} tone="violet" />
           <StatCard label="Published" value={published} icon={Rocket} tone="emerald" />
-          <StatCard label="Words written" value={words.toLocaleString()} icon={Hash} tone="amber" />
+          <StatCard label="Approved words" value={words.toLocaleString()} icon={Hash} tone="amber" />
         </div>
       </Card>
 

@@ -64,6 +64,15 @@ export function isFullyReviewed(status: string): boolean {
   return POST_REVIEW.includes(status as Status);
 }
 
+/**
+ * Word totals only ever count APPROVED content. A draft sitting in writing or
+ * review is not finished work, so it must never inflate anyone's total — use
+ * this everywhere a word count is summed.
+ */
+export function approvedWords(items: { status: string; words?: number | null }[]): number {
+  return items.reduce((sum, t) => sum + (isFullyReviewed(t.status) ? t.words || 0 : 0), 0);
+}
+
 // The number of reviewer sign-offs required before design can begin.
 export const REQUIRED_APPROVALS = 2;
 

@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/session";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SearchableProjectGrid } from "@/components/admin/searchable-project-grid";
+import { approvedWords } from "@/lib/workflow";
 
 export default async function WriterProjectsPage() {
   const user = await requireRole("WRITER");
@@ -37,7 +38,7 @@ export default async function WriterProjectsPage() {
       href: `/writer/projects/${p.id}`,
       stats: [
         { label: "pieces", value: mine.length },
-        { label: "words", value: mine.reduce((s, t) => s + (t.words || 0), 0).toLocaleString() },
+        { label: "approved words", value: approvedWords(mine).toLocaleString() },
         { label: "live", value: mine.filter((t) => t.status === "POSTED" || t.status === "SEO_OPTIMIZED").length },
       ],
     };

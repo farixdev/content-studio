@@ -2,7 +2,7 @@ import { PenLine, FileText, ClipboardCheck, Rocket, Hash } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { toListItem } from "@/lib/tasks";
-import { isFullyReviewed } from "@/lib/workflow";
+import { approvedWords } from "@/lib/workflow";
 import { PageHeader } from "@/components/layout/page-header";
 import { SearchableTaskGroups } from "@/components/task/searchable-task-groups";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -35,7 +35,7 @@ export default async function WriterHome() {
   const inReview = pick(["WRITTEN", "ISSUE_RESOLVED", "REVIEWED_BY_UMAR", "REVIEWED_BY_WAQAR"]).length;
   const published = pick(["POSTED", "SEO_OPTIMIZED"]).length;
   // Only approved content counts toward the final word total.
-  const words = items.reduce((s, t) => s + (isFullyReviewed(t.status) ? t.words || 0 : 0), 0);
+  const words = approvedWords(items);
 
   return (
     <div>
@@ -48,7 +48,7 @@ export default async function WriterHome() {
           <StatCard label="My content" value={items.length} icon={FileText} tone="primary" />
           <StatCard label="In review" value={inReview} icon={ClipboardCheck} tone="violet" />
           <StatCard label="Published" value={published} icon={Rocket} tone="emerald" />
-          <StatCard label="Words written" value={words.toLocaleString()} icon={Hash} tone="amber" />
+          <StatCard label="Approved words" value={words.toLocaleString()} icon={Hash} tone="amber" />
         </div>
       )}
       {items.length === 0 ? (

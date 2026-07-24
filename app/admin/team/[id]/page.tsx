@@ -12,6 +12,7 @@ import { toListItem } from "@/lib/tasks";
 import { buildMonthGroups } from "@/lib/history";
 import { getCurrentUser } from "@/lib/session";
 import { taskWhereForViewer } from "@/lib/projects";
+import { approvedWords } from "@/lib/workflow";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 
@@ -66,7 +67,8 @@ export default async function MemberHistoryPage({
   const published = items.filter((t) => t.status === "POSTED" || t.status === "SEO_OPTIMIZED").length;
   const cancelled = items.filter((t) => t.status === "CANCELLED").length;
   const inProgress = total - published - cancelled;
-  const words = items.reduce((sum, t) => sum + (t.words || 0), 0);
+  // Only approved (final) content counts toward a member's word total.
+  const words = approvedWords(items);
 
   const monthGroups = buildMonthGroups(items, member.createdAt);
 
@@ -110,7 +112,7 @@ export default async function MemberHistoryPage({
           <StatCard label={`Content ${cfg.verb}`} value={total} icon={FileText} tone="primary" />
           <StatCard label="Published" value={published} icon={Rocket} tone="emerald" />
           <StatCard label="In pipeline" value={inProgress} icon={Loader} tone="violet" />
-          <StatCard label="Total words" value={words.toLocaleString()} icon={Hash} tone="amber" />
+          <StatCard label="Approved words" value={words.toLocaleString()} icon={Hash} tone="amber" />
         </div>
       </Card>
 

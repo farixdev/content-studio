@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { MemberHistory } from "@/components/admin/member-history";
 import { toListItem } from "@/lib/tasks";
 import { buildMonthGroups } from "@/lib/history";
-import { isFullyReviewed } from "@/lib/workflow";
+import { approvedWords } from "@/lib/workflow";
 
 export default async function WriterHistoryPage({
   searchParams,
@@ -44,7 +44,7 @@ export default async function WriterHistoryPage({
   const published = items.filter((t) => t.status === "POSTED" || t.status === "SEO_OPTIMIZED").length;
   const inPipeline = items.filter((t) => t.status !== "CANCELLED" && !["POSTED", "SEO_OPTIMIZED"].includes(t.status)).length;
   // Approved content only — the final word count.
-  const words = items.reduce((s, t) => s + (isFullyReviewed(t.status) ? t.words || 0 : 0), 0);
+  const words = approvedWords(items);
   const since = items.length
     ? new Date(Math.min(...items.map((t) => new Date(t.date).getTime())))
     : new Date();
